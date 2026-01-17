@@ -8,39 +8,28 @@ import RepoAnalyzer from './components/RepoAnalyzer';
 import ArticleToInfographic from './components/ArticleToInfographic';
 import Home from './components/Home';
 import IntroAnimation from './components/IntroAnimation';
-import ApiKeyModal from './components/ApiKeyModal';
+import UserApiKeyModal from './components/UserApiKeyModal';
 import { ViewMode, RepoHistoryItem, ArticleHistoryItem } from './types';
-import { Github, PenTool, GitBranch, FileText, Home as HomeIcon, CreditCard } from 'lucide-react';
+import { Github, PenTool, GitBranch, FileText, Home as HomeIcon, Key, LogOut } from 'lucide-react';
+import { setApiKey, clearApiKey, getApiKey } from './services/geminiService';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewMode>(ViewMode.HOME);
   const [showIntro, setShowIntro] = useState(true);
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
-  const [checkingKey, setCheckingKey] = useState<boolean>(true);
   
-  // Lifted History State for Persistence
   const [repoHistory, setRepoHistory] = useState<RepoHistoryItem[]>([]);
   const [articleHistory, setArticleHistory] = useState<ArticleHistoryItem[]>([]);
 
   useEffect(() => {
-    const checkKey = async () => {
-      if (window.aistudio && window.aistudio.hasSelectedApiKey) {
-        const has = await window.aistudio.hasSelectedApiKey();
-        setHasApiKey(has);
-      } else {
-        // In environments without the AI Studio bridge, strictly checking might block dev.
-        // However, per instructions to "Require a paid key", we default false if we can't verify.
-        // In a real deploy, window.aistudio is guaranteed.
-        setHasApiKey(false);
-      }
-      setCheckingKey(false);
-    };
-    checkKey();
+    const existingKey = getApiKey();
+    if (existingKey) {
+      setHasApiKey(true);
+    }
   }, []);
 
   const handleIntroComplete = () => {
     setShowIntro(false);
-    // sessionStorage.setItem('hasSeenIntro', 'true'); // Disabled for dev/demo purposes
   };
 
   const handleNavigate = (mode: ViewMode) => {
@@ -55,18 +44,19 @@ const App: React.FC = () => {
     setArticleHistory(prev => [item, ...prev]);
   };
 
-  const onReauthRequested = () => {
-    setHasApiKey(false); // This will trigger the modal to reappear
+  const handleApiKeySubmitted = (apiKey: string) => {
+    setApiKey(apiKey);
+    setHasApiKey(true);
   };
 
-  if (checkingKey) {
-    return <div className="min-h-screen bg-slate-950" />;
-  }
+  const handleLogout = () => {
+    clearApiKey();
+    setHasApiKey(false);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Enforce API Key Modal */}
-      {!hasApiKey && <ApiKeyModal onKeySelected={() => setHasApiKey(true)} />}
+      {!hasApiKey && <UserApiKeyModal onKeySubmitted={handleApiKeySubmitted} />}
 
       {showIntro && <IntroAnimation onComplete={handleIntroComplete} />}
 
@@ -86,11 +76,20 @@ const App: React.FC = () => {
               <p className="text-xs font-mono text-slate-400 tracking-wider uppercase hidden sm:block">Visual Intelligence Platform</p>
             </div>
           </button>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {hasApiKey && (
+              <>
                 <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/5 border border-emerald-500/10 rounded-full text-[10px] font-bold text-emerald-400 font-mono uppercase tracking-widest cursor-help" title="API Key Active">
-                    <CreditCard className="w-3 h-3" /> Paid Tier
+                  <Key className="w-3 h-3" /> Connected
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 md:p-2.5 rounded-xl bg-slate-900/50 border border-white/10 text-slate-400 hover:text-red-400 hover:border-red-500/50 transition-all"
+                  title="Disconnect API Key"
+                >
+                  <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+              </>
             )}
             <a 
               href="https://github.com" 
@@ -105,7 +104,6 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col">
-        {/* Navigation Tabs (Hidden on Home, visible on tools) */}
         {currentView !== ViewMode.HOME && (
             <div className="flex justify-center mb-8 md:mb-10 animate-in fade-in slide-in-from-top-4 sticky top-24 z-40">
             <div className="glass-panel p-1 md:p-1.5 rounded-full flex relative shadow-2xl">

@@ -3,12 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import { GoogleGenAI, Type, Modality } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import { RepoFileTree, Citation } from '../types';
 
-// Helper to ensure we always get the freshest key from the environment
-// immediately before a call.
-const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+let userApiKey: string | null = null;
+
+export function setApiKey(key: string) {
+  userApiKey = key;
+}
+
+export function getApiKey(): string | null {
+  return userApiKey;
+}
+
+export function clearApiKey() {
+  userApiKey = null;
+}
+
+const getAiClient = () => {
+  if (!userApiKey) {
+    throw new Error("No API key available. Please provide your Gemini API key.");
+  }
+  return new GoogleGenAI({ apiKey: userApiKey });
+};
 
 export interface InfographicResult {
     imageData: string | null;
@@ -23,18 +40,15 @@ export async function generateInfographic(
   language: string = "English"
 ): Promise<string | null> {
   const ai = getAiClient();
-  // Summarize architecture for the image prompt
   const limitedTree = fileTree.slice(0, 150).map(f => f.path).join(', ');
   
   let styleGuidelines = "";
   let dimensionPrompt = "";
 
   if (is3D) {
-      // OVERRIDE standard styles for a specific "Tabletop Model" look
       styleGuidelines = `VISUAL STYLE: Photorealistic Miniature Diorama. The data flow should look like a complex, glowing 3D printed physical model sitting on a dark, reflective executive desk.`;
       dimensionPrompt = `PERSPECTIVE & RENDER: Isometric view with TILT-SHIFT depth of field (blurry foreground/background) to make it look like a small, tangible object on a table. Cinematic volumetric lighting. Highly detailed, 'octane render' style.`;
   } else {
-      // Standard 2D styles or Custom
       switch (style) {
           case "Hand-Drawn Blueprint":
               styleGuidelines = `VISUAL STYLE: Technical architectural blueprint. Dark blue background with white/light blue hand-drawn lines. Looks like a sketch on drafting paper.`;
@@ -49,7 +63,6 @@ export async function generateInfographic(
               styleGuidelines = `VISUAL STYLE: Replicate "Androidify Data Flow" aesthetic. Light blue (#eef8fe) solid background. Colorful, flat vector icons. Smooth, bright blue curved arrows.`;
               break;
           default:
-              // Handle custom style string
               if (style && style !== "Custom") {
                   styleGuidelines = `VISUAL STYLE: ${style}.`;
               } else {
@@ -112,7 +125,6 @@ export async function generateInfographic(
 
 export async function askRepoQuestion(question: string, infographicBase64: string, fileTree: RepoFileTree[]): Promise<string> {
   const ai = getAiClient();
-  // Provide context about the file structure to supplement the image
   const limitedTree = fileTree.slice(0, 300).map(f => f.path).join('\n');
   
   const prompt = `You are a senior software architect reviewing a project.
@@ -194,7 +206,6 @@ export async function generateArticleInfographic(
   language: string = "English"
 ): Promise<InfographicResult> {
     const ai = getAiClient();
-    // PHASE 1: Content Understanding & Structural Breakdown (The "Planner")
     if (onProgress) onProgress("RESEARCHING & ANALYZING CONTENT...");
     
     let structuralSummary = "";
@@ -215,29 +226,25 @@ export async function generateArticleInfographic(
         
         Keep the output concise and focused purely on what should be ON the infographic. Ensure all content is in ${language}.`;
 
-        // Switch to 'gemini-3-pro-image-preview' for research phase as requested.
         const analysisResponse = await ai.models.generateContent({
             model: 'gemini-3-pro-image-preview',
             contents: analysisPrompt,
             config: {
                 tools: [{ googleSearch: {} }],
-                // Do NOT set responseMimeType or responseSchema when using tools
             }
         });
         structuralSummary = analysisResponse.text || "";
 
-        // Extract citations from grounding metadata with Titles
         const chunks = analysisResponse.candidates?.[0]?.groundingMetadata?.groundingChunks;
         if (chunks) {
             chunks.forEach((chunk: any) => {
                 if (chunk.web?.uri) {
                     citations.push({
                         uri: chunk.web.uri,
-                        title: chunk.web.title || "" // Default to empty, handle in UI
+                        title: chunk.web.title || ""
                     });
                 }
             });
-            // Deduplicate citations based on URI
             const uniqueCitations = new Map();
             citations.forEach(c => uniqueCitations.set(c.uri, c));
             citations = Array.from(uniqueCitations.values());
@@ -248,7 +255,6 @@ export async function generateArticleInfographic(
         structuralSummary = `Create an infographic about: ${url}. Translate text to ${language}.`;
     }
 
-    // PHASE 2: Visual Synthesis (The "Artist")
     if (onProgress) onProgress("DESIGNING & RENDERING INFOGRAPHIC...");
 
     let styleGuidelines = "";
@@ -266,7 +272,6 @@ export async function generateArticleInfographic(
             styleGuidelines = `STYLE: Modern, flat vector illustration style. Clean, professional, and editorial (like a high-end tech magazine). Cohesive, mature color palette.`;
             break;
         default:
-            // Custom style logic
              if (style && style !== "Custom") {
                 styleGuidelines = `STYLE: Custom User Style: "${style}".`;
              } else {
