@@ -1,10 +1,9 @@
-
 {
-  "short_name": "Flash-n-Link",
-  "name": "Flash-n-Link Studio",
+  "short_name": "Link2Ink",
+  "name": "Link2Ink Studio",
   "icons": [
     {
-      "src": "https://cdn.lucide.dev/zap.svg",
+      "src": "https://cdn.lucide.dev/pen-tool.svg",
       "sizes": "192x192 512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"

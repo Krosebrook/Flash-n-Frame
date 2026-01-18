@@ -1,10 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#020617">
+  <meta name="description" content="Link2Ink: Visual intelligence platform converting code and text into diagrams.">
   <title>Link2Ink Studio</title>
+  
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="https://cdn.lucide.dev/pen-tool.svg">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +22,8 @@
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.552.0",
-    "d3": "https://aistudiocdn.com/d3@^7.9.0"
+    "d3": "https://aistudiocdn.com/d3@^7.9.0",
+    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1"
   }
 }
 </script>
@@ -28,6 +34,21 @@
         fontFamily: {
           sans: ['Inter', 'sans-serif'],
           mono: ['JetBrains Mono', 'monospace'],
+        },
+        colors: {
+           slate: {
+              950: 'rgb(var(--c-bg-950) / <alpha-value>)',
+              900: 'rgb(var(--c-bg-900) / <alpha-value>)',
+              800: 'rgb(var(--c-bg-800) / <alpha-value>)',
+              700: 'rgb(var(--c-text-700) / <alpha-value>)',
+              600: 'rgb(var(--c-text-600) / <alpha-value>)',
+              500: 'rgb(var(--c-text-500) / <alpha-value>)',
+              400: 'rgb(var(--c-text-400) / <alpha-value>)',
+              300: 'rgb(var(--c-text-300) / <alpha-value>)',
+              200: 'rgb(var(--c-text-200) / <alpha-value>)',
+              100: 'rgb(var(--c-text-100) / <alpha-value>)',
+           },
+           white: 'rgb(var(--c-white) / <alpha-value>)',
         },
         backgroundImage: {
           'glass-gradient': 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01))',
@@ -43,41 +64,62 @@
       }
     }
   }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(req => console.log('SW Registered', req.scope))
+        .catch(err => console.log('SW Error', err));
+    });
+  }
 </script>
 <style>
   body {
-    background-color: #020617; /* slate-950 */
+    background-color: rgb(var(--c-bg-950));
+    color: rgb(var(--c-text-200));
+    transition: background-color 0.5s ease, color 0.5s ease;
     background-image: 
       radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%), 
       radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      linear-gradient(rgba(var(--c-white), 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(var(--c-white), 0.02) 1px, transparent 1px);
     background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
     background-attachment: fixed;
+    overscroll-behavior-y: none;
   }
+  
   .glass-panel {
-    background: rgba(15, 23, 42, 0.6); /* Semi-transparent dark slate */
+    background: rgba(var(--c-bg-900), 0.6);
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(var(--c-white), 0.08);
     box-shadow: 
-      inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 1px 1px 0 rgba(var(--c-white), 0.15),
       0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    transition: background 0.3s, border-color 0.3s;
   }
-  /* Custom scrollbar for technical feel */
+  
+  .theme-light .glass-panel {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      box-shadow: 
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.8),
+        0 10px 30px -5px rgba(0, 0, 0, 0.1);
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: rgba(2, 6, 23, 0.5);
+    background: rgba(var(--c-bg-950), 0.5);
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(var(--c-white), 0.2);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(var(--c-white), 0.3);
   }
 </style>
 <link rel="stylesheet" href="/index.css">
