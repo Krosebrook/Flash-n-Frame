@@ -5,8 +5,9 @@
 */
 
 import React from 'react';
-import { PenTool, CreditCard, Keyboard, Github } from 'lucide-react';
+import { PenTool, CreditCard, Keyboard, Github, Sun, Moon, Palette } from 'lucide-react';
 import { ViewMode } from '../types';
+import { useTheme, Theme } from '../contexts/ThemeContext';
 
 interface AppHeaderProps {
   hasApiKey: boolean;
@@ -14,11 +15,27 @@ interface AppHeaderProps {
   onShowShortcuts: () => void;
 }
 
+const THEMES: { value: Theme; icon: typeof Sun; label: string }[] = [
+  { value: 'dark', icon: Moon, label: 'Dark' },
+  { value: 'light', icon: Sun, label: 'Light' },
+  { value: 'solarized', icon: Palette, label: 'Solarized' },
+];
+
 export const AppHeader: React.FC<AppHeaderProps> = ({ 
   hasApiKey, 
   onNavigateHome, 
   onShowShortcuts 
 }) => {
+  const { theme, setTheme } = useTheme();
+  
+  const cycleTheme = () => {
+    const currentIndex = THEMES.findIndex(t => t.value === theme);
+    const nextIndex = (currentIndex + 1) % THEMES.length;
+    setTheme(THEMES[nextIndex].value);
+  };
+
+  const ThemeIcon = THEMES.find(t => t.value === theme)?.icon || Moon;
+
   return (
     <header className="sticky top-4 z-50 mx-auto w-[calc(100%-1rem)] md:w-[calc(100%-2rem)] max-w-[1400px]">
       <div className="glass-panel rounded-2xl px-4 md:px-6 py-3 md:py-4 flex justify-between items-center backdrop-blur-md">
@@ -43,6 +60,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   <CreditCard className="w-3 h-3" /> Paid Tier
               </div>
           )}
+          <button
+            onClick={cycleTheme}
+            className="p-2 md:p-2.5 rounded-xl bg-slate-900/50 border border-white/10 text-slate-400 hover:text-white hover:border-violet-500/50 transition-all hover:shadow-neon-violet"
+            title={`Theme: ${theme} (click to cycle)`}
+            aria-label="Toggle Theme"
+          >
+            <ThemeIcon className="w-5 h-5" />
+          </button>
           <button 
             onClick={onShowShortcuts}
             className="p-2 md:p-2.5 rounded-xl bg-slate-900/50 border border-white/10 text-slate-400 hover:text-white hover:border-violet-500/50 transition-all hover:shadow-neon-violet"
