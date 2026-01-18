@@ -1,10 +1,10 @@
 
 /**
- * Flash-n-Link Service Worker
+ * Link2Ink Service Worker
  * Implements Stale-While-Revalidate for assets and Network-First for APIs.
  */
 
-const CACHE_NAME = 'flash-n-link-v1';
+const CACHE_NAME = 'link2ink-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
