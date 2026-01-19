@@ -2,7 +2,209 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import { RepoFileTree } from '../types';
+import { RepoFileTree, DependencyInfo } from '../types';
+
+/**
+ * Fetches raw file content from a GitHub repository.
+ */
+export async function fetchFileContent(owner: string, repo: string, path: string, branch: string = 'main'): Promise<string | null> {
+  const branches = branch ? [branch] : ['main', 'master'];
+  
+  for (const br of branches) {
+    try {
+      const response = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${br}/${path}`);
+      if (response.ok) {
+        return await response.text();
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+  return null;
+}
+
+/**
+ * Parses package.json and extracts dependency information.
+ */
+function parsePackageJson(content: string): DependencyInfo[] {
+  try {
+    const pkg = JSON.parse(content);
+    const deps: DependencyInfo[] = [];
+    
+    const addDeps = (depObj: Record<string, string> | undefined, type: DependencyInfo['type']) => {
+      if (depObj) {
+        Object.entries(depObj).forEach(([name, version]) => {
+          deps.push({ name, version, type, ecosystem: 'npm' });
+        });
+      }
+    };
+    
+    addDeps(pkg.dependencies, 'production');
+    addDeps(pkg.devDependencies, 'development');
+    addDeps(pkg.peerDependencies, 'peer');
+    
+    return deps;
+  } catch (e) {
+    console.error('Failed to parse package.json:', e);
+    return [];
+  }
+}
+
+/**
+ * Parses requirements.txt and extracts dependency information.
+ */
+function parseRequirementsTxt(content: string): DependencyInfo[] {
+  const deps: DependencyInfo[] = [];
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('-')) continue;
+    
+    // Match patterns like: package==1.0.0, package>=1.0.0, package~=1.0.0, package
+    const match = trimmed.match(/^([a-zA-Z0-9_-]+)([<>=!~]+)?(.+)?/);
+    if (match) {
+      deps.push({
+        name: match[1],
+        version: match[3] || 'latest',
+        type: 'production',
+        ecosystem: 'pip'
+      });
+    }
+  }
+  
+  return deps;
+}
+
+/**
+ * Parses Cargo.toml and extracts Rust dependencies.
+ */
+function parseCargoToml(content: string): DependencyInfo[] {
+  const deps: DependencyInfo[] = [];
+  const lines = content.split('\n');
+  let inDependencies = false;
+  let inDevDependencies = false;
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    if (trimmed === '[dependencies]') {
+      inDependencies = true;
+      inDevDependencies = false;
+      continue;
+    }
+    if (trimmed === '[dev-dependencies]') {
+      inDevDependencies = true;
+      inDependencies = false;
+      continue;
+    }
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      inDependencies = false;
+      inDevDependencies = false;
+      continue;
+    }
+    
+    if (inDependencies || inDevDependencies) {
+      // Match: package = "version" or package = { version = "x.x" }
+      const simpleMatch = trimmed.match(/^([a-zA-Z0-9_-]+)\s*=\s*"([^"]+)"/);
+      const complexMatch = trimmed.match(/^([a-zA-Z0-9_-]+)\s*=\s*\{.*version\s*=\s*"([^"]+)"/);
+      
+      const match = simpleMatch || complexMatch;
+      if (match) {
+        deps.push({
+          name: match[1],
+          version: match[2],
+          type: inDevDependencies ? 'development' : 'production',
+          ecosystem: 'cargo'
+        });
+      }
+    }
+  }
+  
+  return deps;
+}
+
+/**
+ * Parses go.mod and extracts Go dependencies.
+ */
+function parseGoMod(content: string): DependencyInfo[] {
+  const deps: DependencyInfo[] = [];
+  const lines = content.split('\n');
+  let inRequire = false;
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    if (trimmed.startsWith('require (')) {
+      inRequire = true;
+      continue;
+    }
+    if (trimmed === ')') {
+      inRequire = false;
+      continue;
+    }
+    
+    // Single line require: require github.com/pkg/errors v0.9.1
+    const singleMatch = trimmed.match(/^require\s+(\S+)\s+(\S+)/);
+    if (singleMatch) {
+      deps.push({
+        name: singleMatch[1],
+        version: singleMatch[2],
+        type: 'production',
+        ecosystem: 'go'
+      });
+      continue;
+    }
+    
+    // Multi-line require block
+    if (inRequire) {
+      const blockMatch = trimmed.match(/^(\S+)\s+(\S+)/);
+      if (blockMatch && !trimmed.startsWith('//')) {
+        deps.push({
+          name: blockMatch[1],
+          version: blockMatch[2],
+          type: 'production',
+          ecosystem: 'go'
+        });
+      }
+    }
+  }
+  
+  return deps;
+}
+
+/**
+ * Fetches and parses dependency files from a repository.
+ */
+export async function fetchRepoDependencies(owner: string, repo: string): Promise<{
+  dependencies: DependencyInfo[];
+  ecosystem: string;
+  manifestFile: string;
+}> {
+  // Try different dependency files in order of preference
+  const manifestFiles = [
+    { path: 'package.json', parser: parsePackageJson, ecosystem: 'npm' },
+    { path: 'requirements.txt', parser: parseRequirementsTxt, ecosystem: 'pip' },
+    { path: 'Cargo.toml', parser: parseCargoToml, ecosystem: 'cargo' },
+    { path: 'go.mod', parser: parseGoMod, ecosystem: 'go' },
+  ];
+  
+  for (const manifest of manifestFiles) {
+    const content = await fetchFileContent(owner, repo, manifest.path);
+    if (content) {
+      const dependencies = manifest.parser(content);
+      if (dependencies.length > 0) {
+        return {
+          dependencies,
+          ecosystem: manifest.ecosystem,
+          manifestFile: manifest.path
+        };
+      }
+    }
+  }
+  
+  return { dependencies: [], ecosystem: 'unknown', manifestFile: '' };
+}
 
 export async function fetchRepoFileTree(owner: string, repo: string): Promise<RepoFileTree[]> {
   // Common default branch names to try

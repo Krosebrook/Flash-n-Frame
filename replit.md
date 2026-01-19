@@ -17,6 +17,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Jan 19, 2026**: Major feature expansion with 10 new capabilities:
+  - GitFlow: Dependency Graph Generator with multi-ecosystem support (npm, pip, cargo, go), version badges, and AI security analysis
+  - SiteSketch: Multi-Source Comparison mode (2-3 URLs) and Key Stats Extractor
+  - Reality Engine: Component Library Scanner, Responsive Variant Generator, Dashboard Generator
+  - DevStudio: AI Code Review, Test Case Generator, Documentation Generator, Gap/Bottleneck Catcher
 - **Jan 18, 2026**: Fixed critical context integration bugs in RepoAnalyzer, ArticleToInfographic, and DevStudio (components now use useProjectContext hook instead of props)
 - **Jan 18, 2026**: Added "Explore in DevStudio" button to RepoAnalyzer with buildGraphFromFileTree utility
 - **Jan 18, 2026**: Added theme toggle button to AppHeader (cycles dark → light → solarized)

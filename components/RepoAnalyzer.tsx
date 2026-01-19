@@ -7,11 +7,14 @@ import React, { useState } from 'react';
 import { fetchRepoFileTree } from '../services/githubService';
 import { generateInfographic } from '../services/geminiService';
 import { RepoFileTree, ViewMode, RepoHistoryItem } from '../types';
-import { AlertCircle, Loader2, Layers, Box, Download, Sparkles, Command, Palette, Globe, Clock, Maximize, KeyRound, Code2 } from 'lucide-react';
+import { AlertCircle, Loader2, Layers, Box, Download, Sparkles, Command, Palette, Globe, Clock, Maximize, KeyRound, Code2, Package, GitBranch } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 import ImageViewer from './ImageViewer';
 import { useProjectContext } from '../contexts/ProjectContext';
 import { buildGraphFromFileTree } from '../utils/graphBuilder';
+import DependencyGraph from './DependencyGraph';
+
+type RepoTab = 'flow' | 'dependencies';
 
 interface RepoAnalyzerProps {
   onNavigate: (mode: ViewMode, data?: any) => void;
@@ -53,12 +56,16 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate }) => {
   const [error, setError] = useState<string | null>(null);
   const [loadingStage, setLoadingStage] = useState<string>('');
   
+  // Tab State
+  const [activeTab, setActiveTab] = useState<RepoTab>('flow');
+  
   // Infographic State
   const [infographicData, setInfographicData] = useState<string | null>(null);
   const [infographic3DData, setInfographic3DData] = useState<string | null>(null);
   const [generating3D, setGenerating3D] = useState(false);
   const [currentFileTree, setCurrentFileTree] = useState<RepoFileTree[] | null>(null);
   const [currentRepoName, setCurrentRepoName] = useState<string>('');
+  const [currentRepoOwner, setCurrentRepoOwner] = useState<string>('');
   
   // Viewer State
   const [fullScreenImage, setFullScreenImage] = useState<{src: string, alt: string} | null>(null);
@@ -119,6 +126,7 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate }) => {
 
     setLoading(true);
     setCurrentRepoName(repoDetails.repo);
+    setCurrentRepoOwner(repoDetails.owner);
     try {
       setLoadingStage('CONNECTING TO GITHUB');
       const fileTree = await fetchRepoFileTree(repoDetails.owner, repoDetails.repo);
@@ -300,8 +308,43 @@ const RepoAnalyzer: React.FC<RepoAnalyzerProps> = ({ onNavigate }) => {
         <LoadingState message={loadingStage} type="repo" />
       )}
 
-      {/* Results Section */}
-      {infographicData && !loading && (
+      {/* Tab Navigation - Shows after first analysis */}
+      {(infographicData || currentRepoName) && !loading && (
+        <div className="flex items-center gap-2 border-b border-white/10 pb-1">
+          <button
+            onClick={() => setActiveTab('flow')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-mono text-sm transition-all ${
+              activeTab === 'flow'
+                ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30 border-b-transparent -mb-[1px]'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+            }`}
+          >
+            <GitBranch className="w-4 h-4" />
+            Flow Diagram
+          </button>
+          <button
+            onClick={() => setActiveTab('dependencies')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg font-mono text-sm transition-all ${
+              activeTab === 'dependencies'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 border-b-transparent -mb-[1px]'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            Dependencies
+          </button>
+        </div>
+      )}
+
+      {/* Dependencies Tab Content */}
+      {activeTab === 'dependencies' && currentRepoOwner && currentRepoName && !loading && (
+        <div className="animate-in fade-in slide-in-from-bottom-4">
+          <DependencyGraph owner={currentRepoOwner} repo={currentRepoName} />
+        </div>
+      )}
+
+      {/* Results Section (Flow Diagram Tab) */}
+      {activeTab === 'flow' && infographicData && !loading && (
         <div className="animate-in fade-in slide-in-from-bottom-8 duration-1000">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

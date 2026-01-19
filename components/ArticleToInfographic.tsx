@@ -4,12 +4,14 @@
 */
 
 import React, { useState } from 'react';
-import { generateArticleInfographic } from '../services/geminiService';
+import { generateArticleInfographic, generateComparisonInfographic, extractKeyStats } from '../services/geminiService';
 import { Citation, ArticleHistoryItem } from '../types';
-import { Link, Loader2, Download, Sparkles, AlertCircle, Palette, Globe, ExternalLink, BookOpen, Clock, Maximize } from 'lucide-react';
+import { Link, Loader2, Download, Sparkles, AlertCircle, Palette, Globe, ExternalLink, BookOpen, Clock, Maximize, GitCompare, BarChart3, Plus, Minus, TrendingUp } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 import ImageViewer from './ImageViewer';
 import { useProjectContext } from '../contexts/ProjectContext';
+
+type SiteSketchMode = 'single' | 'compare' | 'stats';
 
 interface ArticleToInfographicProps {}
 
@@ -51,6 +53,11 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = () => {
   const [error, setError] = useState<string | null>(null);
   const [loadingStage, setLoadingStage] = useState('');
   
+  // Mode State
+  const [mode, setMode] = useState<SiteSketchMode>('single');
+  const [compareUrls, setCompareUrls] = useState<string[]>(['', '']);
+  const [keyStats, setKeyStats] = useState<{stat: string, value: string, context: string}[] | null>(null);
+  
   // Viewer State
   const [fullScreenImage, setFullScreenImage] = useState<{src: string, alt: string} | null>(null);
 
@@ -76,31 +83,98 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = () => {
       setCitations(item.citations);
   };
 
+  const handleAddCompareUrl = () => {
+    if (compareUrls.length < 3) {
+      setCompareUrls([...compareUrls, '']);
+    }
+  };
+
+  const handleRemoveCompareUrl = (index: number) => {
+    if (compareUrls.length > 2) {
+      setCompareUrls(compareUrls.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateCompareUrl = (index: number, value: string) => {
+    const updated = [...compareUrls];
+    updated[index] = value;
+    setCompareUrls(updated);
+  };
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!urlInput.trim()) {
+    
+    // Validate based on mode
+    if (mode === 'single' || mode === 'stats') {
+      if (!urlInput.trim()) {
         setError("Please provide a valid URL.");
         return;
+      }
+    } else if (mode === 'compare') {
+      const validUrls = compareUrls.filter(u => u.trim());
+      if (validUrls.length < 2) {
+        setError("Please provide at least 2 URLs to compare.");
+        return;
+      }
     }
     
     setLoading(true);
     setError(null);
     setImageData(null);
     setCitations([]);
+    setKeyStats(null);
     setLoadingStage('INITIALIZING...');
 
     try {
       const styleToUse = selectedStyle === 'Custom' ? customStyle : selectedStyle;
-      const { imageData: resultImage, citations: resultCitations } = await generateArticleInfographic(urlInput, styleToUse, (stage) => {
-          setLoadingStage(stage);
-      }, selectedLanguage);
       
-      if (resultImage) {
+      if (mode === 'compare') {
+        const validUrls = compareUrls.filter(u => u.trim());
+        const { imageData: resultImage, citations: resultCitations } = await generateComparisonInfographic(
+          validUrls, 
+          styleToUse, 
+          (stage) => setLoadingStage(stage), 
+          selectedLanguage
+        );
+        
+        if (resultImage) {
+          setImageData(resultImage);
+          setCitations(resultCitations);
+          addToHistory(validUrls.join(' vs '), resultImage, resultCitations);
+        } else {
+          throw new Error("Failed to generate comparison infographic.");
+        }
+      } else if (mode === 'stats') {
+        const { imageData: resultImage, citations: resultCitations, stats } = await extractKeyStats(
+          urlInput, 
+          styleToUse, 
+          (stage) => setLoadingStage(stage), 
+          selectedLanguage
+        );
+        
+        if (resultImage) {
+          setImageData(resultImage);
+          setCitations(resultCitations);
+          setKeyStats(stats);
+          addToHistory(urlInput, resultImage, resultCitations);
+        } else {
+          throw new Error("Failed to generate stats infographic.");
+        }
+      } else {
+        const { imageData: resultImage, citations: resultCitations } = await generateArticleInfographic(
+          urlInput, 
+          styleToUse, 
+          (stage) => setLoadingStage(stage), 
+          selectedLanguage
+        );
+        
+        if (resultImage) {
           setImageData(resultImage);
           setCitations(resultCitations);
           addToHistory(urlInput, resultImage, resultCitations);
-      } else {
+        } else {
           throw new Error("Failed to generate infographic image. The URL might be inaccessible.");
+        }
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
@@ -131,26 +205,117 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = () => {
         </p>
       </div>
 
+      {/* Mode Selector */}
+      <div className="flex items-center justify-center gap-2 bg-slate-900/50 rounded-2xl p-1.5 max-w-xl mx-auto">
+        <button
+          type="button"
+          onClick={() => setMode('single')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-mono text-sm transition-all ${
+            mode === 'single'
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          Single Article
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('compare')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-mono text-sm transition-all ${
+            mode === 'compare'
+              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+          }`}
+        >
+          <GitCompare className="w-4 h-4" />
+          Compare Sources
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('stats')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-mono text-sm transition-all ${
+            mode === 'stats'
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Key Stats
+        </button>
+      </div>
+
       {/* Input Section */}
       <div className="glass-panel rounded-3xl p-6 md:p-10 space-y-8 relative z-10">
          <form onSubmit={handleGenerate} className="space-y-8">
-            <div className="space-y-4">
+            
+            {/* Single URL Input (for single and stats modes) */}
+            {(mode === 'single' || mode === 'stats') && (
+              <div className="space-y-4">
                 <label className="text-xs text-emerald-400 font-mono tracking-wider flex items-center gap-2">
-                    <Link className="w-4 h-4" /> SOURCE_URL
+                    <Link className="w-4 h-4" /> {mode === 'stats' ? 'DATA_SOURCE_URL' : 'SOURCE_URL'}
                 </label>
                 <div className="relative">
                     <input
                         type="url"
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
-                        placeholder="https://example.com/interesting-article"
+                        placeholder={mode === 'stats' ? "https://example.com/article-with-statistics" : "https://example.com/interesting-article"}
                         className="w-full bg-slate-950/50 border border-white/10 rounded-2xl px-6 py-5 text-lg text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/50 font-mono transition-all shadow-inner"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-700">
-                        <Sparkles className="w-5 h-5 opacity-50" />
+                        {mode === 'stats' ? <TrendingUp className="w-5 h-5 opacity-50" /> : <Sparkles className="w-5 h-5 opacity-50" />}
                     </div>
                 </div>
-            </div>
+                {mode === 'stats' && (
+                  <p className="text-xs text-slate-500 font-mono">Extracts numbers, percentages, and statistics from the content</p>
+                )}
+              </div>
+            )}
+
+            {/* Multi-URL Input (for compare mode) */}
+            {mode === 'compare' && (
+              <div className="space-y-4">
+                <label className="text-xs text-blue-400 font-mono tracking-wider flex items-center gap-2">
+                    <GitCompare className="w-4 h-4" /> SOURCES_TO_COMPARE
+                </label>
+                <div className="space-y-3">
+                  {compareUrls.map((url, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 font-mono w-16 shrink-0">Source {index + 1}</span>
+                      <div className="relative flex-1">
+                        <input
+                          type="url"
+                          value={url}
+                          onChange={(e) => updateCompareUrl(index, e.target.value)}
+                          placeholder={`https://source${index + 1}.com/article`}
+                          className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 font-mono transition-all"
+                        />
+                      </div>
+                      {compareUrls.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCompareUrl(index)}
+                          className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {compareUrls.length < 3 && (
+                  <button
+                    type="button"
+                    onClick={handleAddCompareUrl}
+                    className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 font-mono transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Add another source (max 3)
+                  </button>
+                )}
+                <p className="text-xs text-slate-500 font-mono">Creates a side-by-side comparison highlighting similarities and differences</p>
+              </div>
+            )}
 
             {/* Style & Language Controls */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -212,11 +377,17 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = () => {
 
             <button
                 type="submit"
-                disabled={loading || !urlInput.trim()}
-                className="w-full py-5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-300 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 font-mono text-base tracking-wider hover:shadow-neon-emerald"
+                disabled={loading || (mode === 'compare' ? compareUrls.filter(u => u.trim()).length < 2 : !urlInput.trim())}
+                className={`w-full py-5 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 font-mono text-base tracking-wider ${
+                  mode === 'compare' 
+                    ? 'bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-300 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)]'
+                    : mode === 'stats'
+                    ? 'bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-300 hover:shadow-[0_0_30px_rgba(245,158,11,0.2)]'
+                    : 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-300 hover:shadow-neon-emerald'
+                }`}
             >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                {loading ? "PROCESSING..." : "GENERATE_INFOGRAPHIC"}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : mode === 'compare' ? <GitCompare className="w-5 h-5" /> : mode === 'stats' ? <BarChart3 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+                {loading ? "PROCESSING..." : mode === 'compare' ? "GENERATE_COMPARISON" : mode === 'stats' ? "EXTRACT_STATS" : "GENERATE_INFOGRAPHIC"}
             </button>
          </form>
       </div>
@@ -257,6 +428,32 @@ const ArticleToInfographic: React.FC<ArticleToInfographicProps> = () => {
                 <div className="absolute inset-0 bg-slate-950/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                 <img src={`data:image/png;base64,${imageData}`} alt="Generated Infographic" className="w-full h-auto object-contain max-h-[800px] mx-auto relative z-10" />
             </div>
+
+            {/* Key Stats Display (only in stats mode) */}
+            {mode === 'stats' && keyStats && keyStats.length > 0 && (
+              <div className="px-6 py-6 border-t border-white/5 bg-amber-500/5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-amber-500/20 rounded-lg border border-amber-500/30">
+                    <BarChart3 className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white tracking-wide font-mono">
+                      Extracted Statistics
+                    </h4>
+                    <p className="text-[10px] text-slate-500 font-mono">{keyStats.length} key data points found</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {keyStats.map((stat, idx) => (
+                    <div key={idx} className="p-4 bg-slate-950/50 rounded-xl border border-amber-500/20">
+                      <p className="text-2xl font-bold text-amber-400 mb-1">{stat.value}</p>
+                      <p className="text-sm font-semibold text-white mb-1">{stat.stat}</p>
+                      <p className="text-xs text-slate-400">{stat.context}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
              {/* Featured Citations Section */}
             {citations.length > 0 && (

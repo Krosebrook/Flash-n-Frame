@@ -5,7 +5,7 @@
  */
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { RepoFileTree, Citation, Task } from '../types';
+import { RepoFileTree, Citation, Task, DependencyInfo } from '../types';
 
 // Helper to ensure we always get the freshest key from the environment
 // immediately before a call.
@@ -135,6 +135,170 @@ export async function generateInfographic(
     }
 
     throw new Error(userMessage);
+  }
+}
+
+/**
+ * Generates a visual dependency graph/tree showing all project dependencies.
+ * 
+ * @param repoName - Name of the repository.
+ * @param dependencies - Array of parsed dependencies.
+ * @param ecosystem - Package ecosystem (npm, pip, cargo, go).
+ * @returns Promise resolving to base64 image data string or null.
+ */
+export async function generateDependencyGraph(
+  repoName: string,
+  dependencies: DependencyInfo[],
+  ecosystem: string
+): Promise<string | null> {
+  const ai = getAiClient();
+  
+  // Group dependencies by type
+  const prodDeps = dependencies.filter(d => d.type === 'production');
+  const devDeps = dependencies.filter(d => d.type === 'development');
+  const peerDeps = dependencies.filter(d => d.type === 'peer');
+  const criticalDeps = dependencies.filter(d => d.securityAlert?.severity === 'critical' || d.securityAlert?.severity === 'high');
+  
+  const formatDeps = (deps: DependencyInfo[]) => 
+    deps.slice(0, 30).map(d => `${d.name}@${d.version}`).join(', ');
+
+  const prompt = `Create a professional DEPENDENCY TREE VISUALIZATION for the "${repoName}" project.
+
+PACKAGE ECOSYSTEM: ${ecosystem.toUpperCase()} (${ecosystem === 'npm' ? 'Node.js/JavaScript' : ecosystem === 'pip' ? 'Python' : ecosystem === 'cargo' ? 'Rust' : 'Go'})
+
+VISUAL STYLE:
+- Dark mode with deep navy/black background (#0f172a)
+- Modern glassmorphism design with subtle gradients
+- Use a radial tree or hierarchical layout with the project at center
+- Color coding: Green for production deps, Blue for dev deps, Orange for peer deps, Red glow for security alerts
+- Each node should show package name and version badge
+
+PRODUCTION DEPENDENCIES (${prodDeps.length}):
+${formatDeps(prodDeps) || 'None'}
+
+DEVELOPMENT DEPENDENCIES (${devDeps.length}):
+${formatDeps(devDeps) || 'None'}
+
+${peerDeps.length > 0 ? `PEER DEPENDENCIES (${peerDeps.length}):
+${formatDeps(peerDeps)}` : ''}
+
+${criticalDeps.length > 0 ? `SECURITY ALERTS (${criticalDeps.length} packages with known vulnerabilities):
+${criticalDeps.map(d => `${d.name} - ${d.securityAlert?.severity?.toUpperCase()}: ${d.securityAlert?.description}`).join('\n')}` : ''}
+
+LAYOUT REQUIREMENTS:
+1. Project name "${repoName}" prominently at the center or top
+2. Dependencies radiate outward grouped by type
+3. Version numbers displayed as small badges
+4. Clear visual separation between dependency types
+5. Legend showing color meanings
+6. Total dependency count displayed
+7. If security alerts exist, highlight those packages with warning indicators`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: {
+        parts: [{ text: prompt }],
+      },
+      config: {
+        responseModalities: [Modality.IMAGE],
+      },
+    });
+
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.data) {
+          return part.inlineData.data;
+        }
+      }
+    }
+    return null;
+  } catch (error: any) {
+    console.error("Gemini dependency graph generation failed:", error);
+    throw new Error("Failed to generate dependency visualization. Please try again.");
+  }
+}
+
+/**
+ * Analyzes dependencies for potential security vulnerabilities and outdated packages.
+ * Uses Gemini to provide intelligent analysis based on known vulnerability patterns.
+ */
+export async function analyzeDependencies(
+  dependencies: DependencyInfo[],
+  ecosystem: string
+): Promise<{ analyzed: DependencyInfo[]; summary: string }> {
+  const ai = getAiClient();
+  
+  const depsString = dependencies.map(d => `${d.name}@${d.version} (${d.type})`).join('\n');
+  
+  const prompt = `Analyze these ${ecosystem} dependencies for potential security concerns:
+
+${depsString}
+
+For each dependency, provide a JSON response with this structure:
+{
+  "analyzed": [
+    {
+      "name": "package-name",
+      "riskLevel": "critical|high|medium|low|safe",
+      "note": "Brief note if there's a known issue, empty string if safe"
+    }
+  ],
+  "summary": "Overall 2-3 sentence summary of the dependency health"
+}
+
+Consider:
+- Known CVEs in popular packages
+- Outdated versions with known issues  
+- Deprecated packages
+- Packages with security history
+
+Return ONLY valid JSON, no markdown.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: { parts: [{ text: prompt }] }
+    });
+
+    const text = response.text?.trim() || '{}';
+    const jsonStr = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    
+    try {
+      const result = JSON.parse(jsonStr);
+      
+      // Merge analysis back into dependencies
+      const analyzedDeps = dependencies.map(dep => {
+        const analysis = result.analyzed?.find((a: any) => a.name === dep.name);
+        if (analysis && analysis.riskLevel !== 'safe' && analysis.note) {
+          return {
+            ...dep,
+            securityAlert: {
+              severity: analysis.riskLevel as 'critical' | 'high' | 'medium' | 'low',
+              description: analysis.note
+            }
+          };
+        }
+        return dep;
+      });
+      
+      return {
+        analyzed: analyzedDeps,
+        summary: result.summary || `Analyzed ${dependencies.length} dependencies in ${ecosystem} ecosystem.`
+      };
+    } catch {
+      return {
+        analyzed: dependencies,
+        summary: `Found ${dependencies.length} dependencies. Security analysis unavailable.`
+      };
+    }
+  } catch (error) {
+    console.error("Dependency analysis failed:", error);
+    return {
+      analyzed: dependencies,
+      summary: `Found ${dependencies.length} dependencies. Security analysis unavailable.`
+    };
   }
 }
 
@@ -302,6 +466,377 @@ export async function askNodeSpecificQuestion(
   }
 }
 
+export interface CodeReviewIssue {
+  severity: 'critical' | 'warning' | 'info' | 'suggestion';
+  category: string;
+  line?: number;
+  title: string;
+  description: string;
+  suggestion?: string;
+}
+
+export interface CodeReviewResult {
+  summary: string;
+  overallScore: number;
+  issues: CodeReviewIssue[];
+  strengths: string[];
+  recommendations: string[];
+}
+
+/**
+ * Performs AI code review analyzing quality, security, and performance.
+ */
+export async function performCodeReview(
+  nodeLabel: string,
+  fileTree: RepoFileTree[],
+  fileContent?: string
+): Promise<CodeReviewResult> {
+  const ai = getAiClient();
+  const limitedTree = fileTree.slice(0, 200).map(f => f.path).join('\n');
+
+  const prompt = `You are a Senior Code Reviewer conducting a comprehensive code review.
+
+${fileContent ? `FILE: "${nodeLabel}"\n\`\`\`\n${fileContent.slice(0, 20000)}\n\`\`\`` : `Analyzing component: "${nodeLabel}" in context of project structure:\n${limitedTree}`}
+
+Perform a thorough code review covering:
+1. Code quality and readability
+2. Security vulnerabilities (injection, XSS, auth issues, etc.)
+3. Performance concerns
+4. Best practice violations
+5. Potential bugs and edge cases
+
+Return as JSON in this exact format:
+{
+  "summary": "Brief overall assessment",
+  "overallScore": 85,
+  "issues": [
+    {
+      "severity": "critical|warning|info|suggestion",
+      "category": "Security|Performance|Quality|Bug|Style",
+      "line": 42,
+      "title": "Issue title",
+      "description": "Detailed explanation",
+      "suggestion": "How to fix it"
+    }
+  ],
+  "strengths": ["Good aspect 1", "Good aspect 2"],
+  "recommendations": ["High-level improvement 1", "High-level improvement 2"]
+}
+
+Return ONLY the JSON, no markdown.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: { parts: [{ text: prompt }] }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+
+    try {
+      return JSON.parse(text) as CodeReviewResult;
+    } catch {
+      return {
+        summary: text,
+        overallScore: 0,
+        issues: [],
+        strengths: [],
+        recommendations: []
+      };
+    }
+  } catch (e) {
+    console.error("Code review failed", e);
+    throw e;
+  }
+}
+
+export interface TestCase {
+  name: string;
+  type: 'unit' | 'integration' | 'edge';
+  description: string;
+  code: string;
+  assertions: string[];
+}
+
+export interface TestGenerationResult {
+  framework: string;
+  setup: string;
+  testCases: TestCase[];
+  edgeCases: string[];
+  coverageNotes: string;
+}
+
+/**
+ * Generates test cases and edge cases for code.
+ */
+export async function generateTestCases(
+  nodeLabel: string,
+  fileTree: RepoFileTree[],
+  fileContent?: string
+): Promise<TestGenerationResult> {
+  const ai = getAiClient();
+  const limitedTree = fileTree.slice(0, 150).map(f => f.path).join('\n');
+
+  const prompt = `You are a QA Engineer and Test Automation Expert.
+
+${fileContent ? `FILE: "${nodeLabel}"\n\`\`\`\n${fileContent.slice(0, 15000)}\n\`\`\`` : `Analyzing component: "${nodeLabel}" in context:\n${limitedTree}`}
+
+Generate comprehensive test cases including:
+1. Unit tests for individual functions/methods
+2. Integration tests for component interactions
+3. Edge cases that could cause failures
+4. Boundary value tests
+5. Error handling tests
+
+Return as JSON:
+{
+  "framework": "Jest/Vitest recommended",
+  "setup": "Test setup code (imports, mocks, etc.)",
+  "testCases": [
+    {
+      "name": "should handle valid input correctly",
+      "type": "unit|integration|edge",
+      "description": "What this test verifies",
+      "code": "test('should...', () => { ... })",
+      "assertions": ["Expected behavior 1", "Expected behavior 2"]
+    }
+  ],
+  "edgeCases": [
+    "Edge case description 1",
+    "Edge case description 2"
+  ],
+  "coverageNotes": "Notes on achieving good coverage"
+}
+
+Return ONLY the JSON, no markdown.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: { parts: [{ text: prompt }] }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+
+    try {
+      return JSON.parse(text) as TestGenerationResult;
+    } catch {
+      return {
+        framework: "Unknown",
+        setup: "",
+        testCases: [],
+        edgeCases: [],
+        coverageNotes: text
+      };
+    }
+  } catch (e) {
+    console.error("Test generation failed", e);
+    throw e;
+  }
+}
+
+export interface DocumentationResult {
+  moduleDoc: string;
+  functions: Array<{
+    name: string;
+    jsdoc: string;
+    params: Array<{ name: string; type: string; description: string }>;
+    returns: { type: string; description: string };
+  }>;
+  usageExamples: string[];
+  notes: string;
+}
+
+/**
+ * Generates documentation for code files.
+ */
+export async function generateDocumentation(
+  nodeLabel: string,
+  fileTree: RepoFileTree[],
+  fileContent?: string
+): Promise<DocumentationResult> {
+  const ai = getAiClient();
+
+  const prompt = `You are a Technical Writer creating comprehensive documentation.
+
+${fileContent ? `FILE: "${nodeLabel}"\n\`\`\`\n${fileContent.slice(0, 18000)}\n\`\`\`` : `Create documentation for: "${nodeLabel}"`}
+
+Generate complete documentation including:
+1. Module/file description
+2. JSDoc/docstrings for each function/method
+3. Parameter descriptions with types
+4. Return value documentation
+5. Usage examples
+
+Return as JSON:
+{
+  "moduleDoc": "Module-level documentation describing purpose and usage",
+  "functions": [
+    {
+      "name": "functionName",
+      "jsdoc": "/**\n * Full JSDoc comment\n * @param {Type} param - Description\n * @returns {Type} Description\n */",
+      "params": [
+        { "name": "param1", "type": "string", "description": "What it does" }
+      ],
+      "returns": { "type": "boolean", "description": "What it returns" }
+    }
+  ],
+  "usageExamples": [
+    "// Example 1\nimport { func } from './module';\nfunc('test');",
+    "// Example 2\n..."
+  ],
+  "notes": "Additional notes about the module"
+}
+
+Return ONLY the JSON, no markdown.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: { parts: [{ text: prompt }] }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+
+    try {
+      return JSON.parse(text) as DocumentationResult;
+    } catch {
+      return {
+        moduleDoc: text,
+        functions: [],
+        usageExamples: [],
+        notes: ""
+      };
+    }
+  } catch (e) {
+    console.error("Documentation generation failed", e);
+    throw e;
+  }
+}
+
+export interface GapAnalysisResult {
+  gaps: Array<{
+    type: 'missing_logic' | 'error_handling' | 'edge_case' | 'validation' | 'security';
+    severity: 'high' | 'medium' | 'low';
+    title: string;
+    description: string;
+    location?: string;
+    recommendation: string;
+  }>;
+  bottlenecks: Array<{
+    type: 'performance' | 'scalability' | 'resource' | 'dependency';
+    title: string;
+    impact: string;
+    mitigation: string;
+  }>;
+  unknowns: Array<{
+    area: string;
+    concern: string;
+    investigationNeeded: string;
+  }>;
+  overallRisk: 'low' | 'medium' | 'high';
+  summary: string;
+}
+
+/**
+ * Identifies gaps, bottlenecks, and unknown unknowns in code.
+ */
+export async function analyzeGapsAndBottlenecks(
+  nodeLabel: string,
+  fileTree: RepoFileTree[],
+  fileContent?: string
+): Promise<GapAnalysisResult> {
+  const ai = getAiClient();
+  const limitedTree = fileTree.slice(0, 200).map(f => f.path).join('\n');
+
+  const prompt = `You are a Principal Engineer with expertise in identifying architectural gaps and potential issues.
+
+${fileContent ? `FILE: "${nodeLabel}"\n\`\`\`\n${fileContent.slice(0, 18000)}\n\`\`\`` : `Analyzing: "${nodeLabel}" in context:\n${limitedTree}`}
+
+Perform deep analysis to identify:
+
+1. GAPS (Missing Logic):
+   - Missing error handling
+   - Unhandled edge cases
+   - Missing input validation
+   - Missing security checks
+   - Incomplete implementations
+
+2. BOTTLENECKS:
+   - Performance bottlenecks (N+1 queries, expensive loops, etc.)
+   - Scalability concerns
+   - Resource usage issues
+   - Blocking operations
+   - Dependency bottlenecks
+
+3. UNKNOWN UNKNOWNS:
+   - Potential blind spots
+   - Areas that need investigation
+   - Assumptions that might be wrong
+   - External factors not accounted for
+
+Return as JSON:
+{
+  "gaps": [
+    {
+      "type": "missing_logic|error_handling|edge_case|validation|security",
+      "severity": "high|medium|low",
+      "title": "Gap title",
+      "description": "What's missing",
+      "location": "function name or area",
+      "recommendation": "How to address"
+    }
+  ],
+  "bottlenecks": [
+    {
+      "type": "performance|scalability|resource|dependency",
+      "title": "Bottleneck title",
+      "impact": "Potential impact",
+      "mitigation": "How to fix"
+    }
+  ],
+  "unknowns": [
+    {
+      "area": "Area of concern",
+      "concern": "What could go wrong",
+      "investigationNeeded": "What to look into"
+    }
+  ],
+  "overallRisk": "low|medium|high",
+  "summary": "Overall assessment"
+}
+
+Return ONLY the JSON, no markdown.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: { parts: [{ text: prompt }] }
+    });
+
+    let text = response.text || "{}";
+    text = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+
+    try {
+      return JSON.parse(text) as GapAnalysisResult;
+    } catch {
+      return {
+        gaps: [],
+        bottlenecks: [],
+        unknowns: [],
+        overallRisk: 'medium',
+        summary: text
+      };
+    }
+  } catch (e) {
+    console.error("Gap analysis failed", e);
+    throw e;
+  }
+}
+
 /**
  * Generates an infographic from a web article URL.
  */
@@ -425,6 +960,285 @@ export async function generateArticleInfographic(
         console.error("Article infographic generation failed:", error);
         throw error;
     }
+}
+
+/**
+ * Generates a comparison infographic from multiple source URLs.
+ * Highlights similarities, differences, and key insights across sources.
+ */
+export async function generateComparisonInfographic(
+  urls: string[],
+  style: string,
+  onProgress?: (stage: string) => void,
+  language: string = "English"
+): Promise<InfographicResult> {
+  const ai = getAiClient();
+  if (onProgress) onProgress("ANALYZING MULTIPLE SOURCES...");
+  
+  let comparisonSummary = "";
+  let citations: Citation[] = [];
+  
+  try {
+    const analysisPrompt = `You are an expert Comparative Analyst. Your goal is to compare and contrast content from multiple web pages.
+
+    Analyze the content at these URLs:
+    ${urls.map((url, i) => `Source ${i + 1}: ${url}`).join('\n')}
+    
+    TARGET LANGUAGE: ${language}.
+    
+    Provide a structured comparison specifically designed for visual representation in ${language}:
+    
+    1. COMPARISON HEADLINE: A concise title that captures what's being compared (in ${language}).
+    
+    2. SOURCE SUMMARIES: For each source, provide:
+       - Source name/identifier
+       - 2-3 key claims or points
+       - Main perspective or angle
+    
+    3. SIMILARITIES: 2-3 points where the sources agree or overlap.
+    
+    4. DIFFERENCES: 2-3 key points of disagreement or different approaches.
+    
+    5. KEY INSIGHTS: 2-3 unique insights that emerge from comparing these sources.
+    
+    6. VISUAL SUGGESTION: Best way to visualize this comparison (e.g., "side-by-side columns", "Venn diagram", "comparison table", "pros/cons layout").
+    
+    Keep the output concise and focused purely on what should be ON the infographic. Ensure all content is in ${language}.`;
+
+    const analysisResponse = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: analysisPrompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+      }
+    });
+    comparisonSummary = analysisResponse.text || "";
+
+    const chunks = analysisResponse.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    if (chunks) {
+      chunks.forEach((chunk: any) => {
+        if (chunk.web?.uri) {
+          citations.push({
+            uri: chunk.web.uri,
+            title: chunk.web.title || ""
+          });
+        }
+      });
+      const uniqueCitations = new Map();
+      citations.forEach(c => uniqueCitations.set(c.uri, c));
+      citations = Array.from(uniqueCitations.values());
+    }
+
+  } catch (e) {
+    console.warn("Multi-source analysis failed, falling back to direct prompt", e);
+    comparisonSummary = `Create a comparison infographic for these sources: ${urls.join(' vs ')}. Translate text to ${language}.`;
+  }
+
+  if (onProgress) onProgress("DESIGNING COMPARISON VISUAL...");
+
+  let styleGuidelines = "";
+  switch (style) {
+    case "Fun & Playful":
+      styleGuidelines = `STYLE: Fun, playful, vibrant 2D vector illustrations. Use bright colors, rounded shapes. Use distinct colors for each source.`;
+      break;
+    case "Clean Minimalist":
+      styleGuidelines = `STYLE: Ultra-minimalist. Lots of whitespace, thin lines, limited color palette. Clear visual separation between sources.`;
+      break;
+    case "Dark Mode Tech":
+      styleGuidelines = `STYLE: Dark mode technical aesthetic. Dark background with bright accent colors. Neon highlights for key differences.`;
+      break;
+    case "Modern Editorial":
+    default:
+      styleGuidelines = `STYLE: Modern, flat vector illustration style. Clean, professional editorial look with distinct colors per source.`;
+      break;
+  }
+
+  const imagePrompt = `Create a professional COMPARISON INFOGRAPHIC based on this analysis:
+
+  ${comparisonSummary}
+
+  VISUAL DESIGN RULES:
+  - ${styleGuidelines}
+  - LANGUAGE: All text MUST be in ${language}.
+  - LAYOUT: Follow the "VISUAL SUGGESTION" from the analysis. If not provided, use a side-by-side or table comparison layout.
+  - EACH SOURCE: Give each source a distinct color or section.
+  - HIGHLIGHTS: Use visual emphasis (icons, colors, boxes) for SIMILARITIES and DIFFERENCES.
+  - CLARITY: Make it immediately clear what's being compared and how they differ.
+  - TYPOGRAPHY: Clean, highly readable sans-serif fonts.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: {
+        parts: [{ text: imagePrompt }],
+      },
+      config: {
+        responseModalities: [Modality.IMAGE],
+      },
+    });
+
+    let imageData = null;
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.data) {
+          imageData = part.inlineData.data;
+          break;
+        }
+      }
+    }
+    return { imageData, citations };
+  } catch (error) {
+    console.error("Comparison infographic generation failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Extracts key statistics and numerical data from an article URL.
+ * Returns structured stats for visual display and generates a stats-focused infographic.
+ */
+export async function extractKeyStats(
+  url: string,
+  style: string,
+  onProgress?: (stage: string) => void,
+  language: string = "English"
+): Promise<{ 
+  imageData: string | null; 
+  citations: Citation[];
+  stats: { stat: string; value: string; context: string }[];
+}> {
+  const ai = getAiClient();
+  if (onProgress) onProgress("SCANNING FOR KEY STATISTICS...");
+  
+  let statsData: { stat: string; value: string; context: string }[] = [];
+  let citations: Citation[] = [];
+  
+  try {
+    const analysisPrompt = `You are a Data Analyst specializing in extracting key statistics and numbers from content.
+
+    Analyze the content at this URL: ${url}
+    
+    TARGET LANGUAGE: ${language}.
+    
+    Extract ALL significant numbers, percentages, statistics, and quantifiable data:
+    
+    Return as a JSON object with this structure:
+    {
+      "headline": "Main topic of the data (in ${language})",
+      "stats": [
+        {
+          "stat": "What is being measured (in ${language})",
+          "value": "The numerical value with units",
+          "context": "Brief explanation of significance (in ${language})"
+        }
+      ],
+      "trend": "Overall trend or conclusion from the data (in ${language})"
+    }
+    
+    Include at minimum 3 statistics, maximum 8. Prioritize the most impactful numbers.
+    Return ONLY valid JSON, no markdown.`;
+
+    const analysisResponse = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: analysisPrompt,
+      config: {
+        tools: [{ googleSearch: {} }],
+      }
+    });
+    
+    const responseText = analysisResponse.text || "{}";
+    const jsonStr = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    
+    try {
+      const parsed = JSON.parse(jsonStr);
+      statsData = parsed.stats || [];
+    } catch {
+      console.warn("Failed to parse stats JSON");
+    }
+
+    const chunks = analysisResponse.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    if (chunks) {
+      chunks.forEach((chunk: any) => {
+        if (chunk.web?.uri) {
+          citations.push({
+            uri: chunk.web.uri,
+            title: chunk.web.title || ""
+          });
+        }
+      });
+      const uniqueCitations = new Map();
+      citations.forEach(c => uniqueCitations.set(c.uri, c));
+      citations = Array.from(uniqueCitations.values());
+    }
+
+  } catch (e) {
+    console.warn("Stats extraction failed", e);
+  }
+
+  if (onProgress) onProgress("GENERATING STATS VISUALIZATION...");
+
+  const statsString = statsData.map(s => `${s.stat}: ${s.value} - ${s.context}`).join('\n');
+  
+  let styleGuidelines = "";
+  switch (style) {
+    case "Fun & Playful":
+      styleGuidelines = `STYLE: Fun, colorful data visualization. Use bright colors, icons, and playful charts.`;
+      break;
+    case "Clean Minimalist":
+      styleGuidelines = `STYLE: Clean, minimal data visualization. Focus on the numbers with ample whitespace.`;
+      break;
+    case "Dark Mode Tech":
+      styleGuidelines = `STYLE: Dark tech dashboard aesthetic. Glowing numbers, neon accent colors, dark background.`;
+      break;
+    case "Modern Editorial":
+    default:
+      styleGuidelines = `STYLE: Modern editorial data visualization. Professional, clean, with clear data hierarchy.`;
+      break;
+  }
+
+  const imagePrompt = `Create a DATA-FOCUSED INFOGRAPHIC showcasing these key statistics:
+
+  ${statsString}
+
+  VISUAL DESIGN RULES:
+  - ${styleGuidelines}
+  - LANGUAGE: All text MUST be in ${language}.
+  - LAYOUT: Use a stats dashboard or data card layout.
+  - NUMBERS: Make numerical values VERY LARGE and prominent - they are the stars.
+  - ICONS: Use relevant icons next to each statistic.
+  - HIERARCHY: Most important stat should be largest/most prominent.
+  - COLORS: Use color coding to group related stats or show positive/negative trends.
+  - DATA VISUALIZATION: If appropriate, include small charts, gauges, or progress bars.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: {
+        parts: [{ text: imagePrompt }],
+      },
+      config: {
+        responseModalities: [Modality.IMAGE],
+      },
+    });
+
+    let imageData = null;
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.data) {
+          imageData = part.inlineData.data;
+          break;
+        }
+      }
+    }
+    return { imageData, citations, stats: statsData };
+  } catch (error) {
+    console.error("Stats infographic generation failed:", error);
+    throw error;
+  }
 }
 
 /**
@@ -563,4 +1377,293 @@ export async function generateCodeFromImage(base64Image: string, prompt: string)
      console.error("Code generation failed", e);
      throw e;
    }
+}
+
+export interface ComponentInfo {
+  name: string;
+  category: string;
+  description: string;
+  props: string[];
+  code: string;
+}
+
+export interface ComponentLibraryResult {
+  components: ComponentInfo[];
+  summary: string;
+  designTokens: {
+    colors: string[];
+    typography: string[];
+    spacing: string[];
+  };
+}
+
+/**
+ * Scans a UI screenshot and extracts reusable UI component patterns.
+ */
+export async function scanComponentLibrary(base64Image: string): Promise<ComponentLibraryResult> {
+  const ai = getAiClient();
+  const prompt = `You are an expert UI/UX Engineer and React specialist.
+
+Analyze the attached UI screenshot and identify ALL reusable UI components/patterns visible.
+
+For each component found, provide:
+1. A semantic component name (e.g., "PrimaryButton", "CardHeader", "NavItem")
+2. Category (Button, Card, Input, Navigation, Layout, Typography, etc.)
+3. Brief description of its purpose
+4. Likely props it would accept
+5. React/Tailwind code to implement it
+
+Also extract design tokens:
+- Colors (list hex codes or Tailwind classes used)
+- Typography (font sizes, weights visible)
+- Spacing patterns (padding/margin patterns)
+
+Return as JSON in this exact format:
+{
+  "components": [
+    {
+      "name": "ComponentName",
+      "category": "Category",
+      "description": "What it does",
+      "props": ["prop1", "prop2"],
+      "code": "const ComponentName = () => { ... }"
+    }
+  ],
+  "summary": "Brief overall analysis of the design system",
+  "designTokens": {
+    "colors": ["#hex1", "#hex2"],
+    "typography": ["text-xl font-bold", "text-sm"],
+    "spacing": ["p-4", "gap-2"]
+  }
+}
+
+Return ONLY the JSON, no markdown formatting.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/png', data: base64Image } },
+          { text: prompt }
+        ]
+      }
+    });
+    
+    let text = response.text || "{}";
+    text = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+    
+    try {
+      return JSON.parse(text) as ComponentLibraryResult;
+    } catch {
+      return {
+        components: [],
+        summary: text,
+        designTokens: { colors: [], typography: [], spacing: [] }
+      };
+    }
+  } catch (e) {
+    console.error("Component library scan failed", e);
+    throw e;
+  }
+}
+
+export interface ResponsiveVariant {
+  breakpoint: 'mobile' | 'tablet' | 'desktop';
+  description: string;
+  code: string;
+  notes: string;
+}
+
+export interface ResponsiveResult {
+  variants: ResponsiveVariant[];
+  sharedStyles: string;
+  responsiveNotes: string;
+}
+
+/**
+ * Generates responsive variants (mobile/tablet/desktop) from a UI screenshot.
+ */
+export async function generateResponsiveVariants(base64Image: string, componentName?: string): Promise<ResponsiveResult> {
+  const ai = getAiClient();
+  const prompt = `You are an expert Frontend Developer specializing in responsive web design.
+
+Analyze the attached UI screenshot${componentName ? ` (Component: "${componentName}")` : ''}.
+
+Generate responsive React/Tailwind code for 3 breakpoints:
+1. MOBILE (< 640px) - Single column, stacked elements, touch-friendly
+2. TABLET (640px - 1024px) - Two columns where appropriate, medium spacing
+3. DESKTOP (> 1024px) - Full layout as shown or enhanced
+
+For each variant provide:
+- Tailwind responsive classes used
+- Layout changes made
+- Any component behavior changes
+
+Return as JSON in this exact format:
+{
+  "variants": [
+    {
+      "breakpoint": "mobile",
+      "description": "Stacked layout with hamburger menu",
+      "code": "const MobileLayout = () => { ... }",
+      "notes": "Collapse sidebar to drawer, stack cards vertically"
+    },
+    {
+      "breakpoint": "tablet",
+      "description": "Two-column grid layout",
+      "code": "const TabletLayout = () => { ... }",
+      "notes": "2-column grid, condensed navigation"
+    },
+    {
+      "breakpoint": "desktop",
+      "description": "Full multi-column layout",
+      "code": "const DesktopLayout = () => { ... }",
+      "notes": "Full sidebar, 3+ column grid"
+    }
+  ],
+  "sharedStyles": "Tailwind classes common across all breakpoints",
+  "responsiveNotes": "Overall responsive design recommendations"
+}
+
+Return ONLY the JSON, no markdown formatting.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/png', data: base64Image } },
+          { text: prompt }
+        ]
+      }
+    });
+    
+    let text = response.text || "{}";
+    text = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+    
+    try {
+      return JSON.parse(text) as ResponsiveResult;
+    } catch {
+      return {
+        variants: [],
+        sharedStyles: "",
+        responsiveNotes: text
+      };
+    }
+  } catch (e) {
+    console.error("Responsive variant generation failed", e);
+    throw e;
+  }
+}
+
+export interface DashboardFile {
+  filename: string;
+  type: 'component' | 'style' | 'hook' | 'util' | 'config' | 'doc';
+  content: string;
+  description: string;
+}
+
+export interface DashboardResult {
+  name: string;
+  description: string;
+  files: DashboardFile[];
+  documentation: string;
+  features: string[];
+  dependencies: string[];
+}
+
+/**
+ * Generates a complete dashboard project from a UI screenshot.
+ */
+export async function generateDashboard(base64Image: string, requirements?: string): Promise<DashboardResult> {
+  const ai = getAiClient();
+  const prompt = `You are a Senior Full-Stack Developer creating a complete dashboard project.
+
+Analyze the attached UI screenshot and generate a COMPLETE dashboard implementation.
+${requirements ? `Additional Requirements: ${requirements}` : ''}
+
+Generate a complete project with:
+1. Multiple React component files (modular structure)
+2. Custom hooks for data fetching/state
+3. Utility functions
+4. Type definitions
+5. Documentation (README)
+
+For a dashboard, include:
+- Main Dashboard layout component
+- Sidebar/Navigation component
+- Card/Widget components
+- Chart components (using Recharts/D3 patterns)
+- Table/List components
+- Header component
+
+Return as JSON in this exact format:
+{
+  "name": "DashboardProjectName",
+  "description": "What this dashboard does",
+  "files": [
+    {
+      "filename": "components/Dashboard.tsx",
+      "type": "component",
+      "content": "import React from 'react'; ...",
+      "description": "Main dashboard layout"
+    },
+    {
+      "filename": "components/Sidebar.tsx",
+      "type": "component",
+      "content": "...",
+      "description": "Navigation sidebar"
+    },
+    {
+      "filename": "hooks/useDashboardData.ts",
+      "type": "hook",
+      "content": "...",
+      "description": "Data fetching hook"
+    },
+    {
+      "filename": "README.md",
+      "type": "doc",
+      "content": "# Dashboard\\n...",
+      "description": "Project documentation"
+    }
+  ],
+  "documentation": "Full usage guide and setup instructions",
+  "features": ["Feature 1", "Feature 2"],
+  "dependencies": ["recharts", "date-fns"]
+}
+
+Generate at least 5-8 files for a complete project structure.
+Return ONLY the JSON, no markdown formatting.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: {
+        parts: [
+          { inlineData: { mimeType: 'image/png', data: base64Image } },
+          { text: prompt }
+        ]
+      }
+    });
+    
+    let text = response.text || "{}";
+    text = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim();
+    
+    try {
+      return JSON.parse(text) as DashboardResult;
+    } catch {
+      return {
+        name: "Dashboard",
+        description: "Generated dashboard",
+        files: [],
+        documentation: text,
+        features: [],
+        dependencies: []
+      };
+    }
+  } catch (e) {
+    console.error("Dashboard generation failed", e);
+    throw e;
+  }
 }

@@ -66,6 +66,20 @@ export interface RepoFileTree {
 }
 
 /**
+ * Represents a dependency from a package manifest file.
+ */
+export interface DependencyInfo {
+  name: string;
+  version: string;
+  type: 'production' | 'development' | 'peer';
+  ecosystem: 'npm' | 'pip' | 'cargo' | 'go';
+  securityAlert?: {
+    severity: 'critical' | 'high' | 'medium' | 'low';
+    description: string;
+  };
+}
+
+/**
  * State object for the DevStudio environment.
  */
 export interface DevStudioState {
