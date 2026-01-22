@@ -17,6 +17,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Jan 22, 2026**: Added user-specific API key management system:
+  - UserSettingsContext stores keys in browser localStorage (private to each user)
+  - UserSettingsModal for entering GitHub, Gemini, OpenAI, Anthropic, Notion, Google Drive keys
+  - Settings button added to header (gear icon, glows green when keys are configured)
+  - Updated geminiService and githubService to use user-provided keys with fallback to environment variables
+  - Users can now access their own private GitHub repositories with personal tokens
 - **Jan 22, 2026**: Integrated 30+ components from 3 external projects (INFOGenius, OmniGen-dashboards, DashBoardGen):
   - **Data Visualization (components/viz/)**: ChartRenderer, VizBar, VizArea, VizScatter, VizHeatmap, VizTreemap, VizKPI, VizTooltip, WidgetContainer
   - **Background Effects (components/backgrounds/)**: AuroraBackground, AmbientBackgroundNoiseCanvas, DottedGlowBackground, NoiseOverlay
