@@ -7,12 +7,14 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import IntroAnimation from './components/IntroAnimation';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+import UserSettingsModal from './components/UserSettingsModal';
 import { AppHeader } from './components/AppHeader';
 import { NavigationTabs } from './components/NavigationTabs';
 import { ViewMode } from './types';
 import { Loader2 } from 'lucide-react';
 import { ProjectProvider } from './contexts/ProjectContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { UserSettingsProvider } from './contexts/UserSettingsContext';
 
 // Lazy load heavy feature components for PWA performance optimization
 const RepoAnalyzer = lazy(() => import('./components/RepoAnalyzer'));
@@ -132,9 +134,12 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <ProjectProvider>
-        <AppContent />
-      </ProjectProvider>
+      <UserSettingsProvider>
+        <ProjectProvider>
+          <AppContent />
+          <UserSettingsModal />
+        </ProjectProvider>
+      </UserSettingsProvider>
     </ThemeProvider>
   );
 };

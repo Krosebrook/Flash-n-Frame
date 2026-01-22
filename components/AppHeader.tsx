@@ -5,9 +5,10 @@
 */
 
 import React from 'react';
-import { PenTool, CreditCard, Keyboard, Github, Sun, Moon, Palette } from 'lucide-react';
+import { PenTool, CreditCard, Keyboard, Github, Sun, Moon, Palette, Settings } from 'lucide-react';
 import { ViewMode } from '../types';
 import { useTheme, Theme } from '../contexts/ThemeContext';
+import { useUserSettings } from '../contexts/UserSettingsContext';
 
 interface AppHeaderProps {
   hasApiKey: boolean;
@@ -27,6 +28,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onShowShortcuts 
 }) => {
   const { theme, setTheme } = useTheme();
+  const { openSettings, hasKey } = useUserSettings();
+  const hasUserKeys = hasKey('geminiKey') || hasKey('githubToken');
   
   const cycleTheme = () => {
     const currentIndex = THEMES.findIndex(t => t.value === theme);
@@ -60,6 +63,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   <CreditCard className="w-3 h-3" /> Paid Tier
               </div>
           )}
+          <button
+            onClick={openSettings}
+            className={`p-2 md:p-2.5 rounded-xl bg-slate-900/50 border text-slate-400 hover:text-white transition-all hover:shadow-neon-violet ${
+              hasUserKeys ? 'border-emerald-500/50 text-emerald-400' : 'border-white/10 hover:border-violet-500/50'
+            }`}
+            title="API Keys & Settings"
+            aria-label="API Keys & Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
           <button
             onClick={cycleTheme}
             className="p-2 md:p-2.5 rounded-xl bg-slate-900/50 border border-white/10 text-slate-400 hover:text-white hover:border-violet-500/50 transition-all hover:shadow-neon-violet"

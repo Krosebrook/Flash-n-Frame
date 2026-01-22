@@ -1,0 +1,206 @@
+import React, { useState } from 'react';
+import { X, Key, Eye, EyeOff, Check, AlertCircle, Github, Sparkles, Brain, BookOpen, HardDrive, Cloud } from 'lucide-react';
+import { useUserSettings, UserApiKeys } from '../contexts/UserSettingsContext';
+
+interface ApiKeyField {
+  key: keyof UserApiKeys;
+  label: string;
+  placeholder: string;
+  icon: React.ReactNode;
+  helpUrl?: string;
+}
+
+const API_KEY_FIELDS: ApiKeyField[] = [
+  {
+    key: 'githubToken',
+    label: 'GitHub Personal Access Token',
+    placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
+    icon: <Github className="w-5 h-5" />,
+    helpUrl: 'https://github.com/settings/tokens',
+  },
+  {
+    key: 'geminiKey',
+    label: 'Google Gemini API Key',
+    placeholder: 'AIzaSy...',
+    icon: <Sparkles className="w-5 h-5" />,
+    helpUrl: 'https://aistudio.google.com/apikey',
+  },
+  {
+    key: 'openaiKey',
+    label: 'OpenAI API Key',
+    placeholder: 'sk-...',
+    icon: <Brain className="w-5 h-5" />,
+    helpUrl: 'https://platform.openai.com/api-keys',
+  },
+  {
+    key: 'anthropicKey',
+    label: 'Anthropic API Key',
+    placeholder: 'sk-ant-...',
+    icon: <Brain className="w-5 h-5" />,
+    helpUrl: 'https://console.anthropic.com/settings/keys',
+  },
+  {
+    key: 'notionKey',
+    label: 'Notion Integration Token',
+    placeholder: 'secret_...',
+    icon: <BookOpen className="w-5 h-5" />,
+    helpUrl: 'https://www.notion.so/my-integrations',
+  },
+  {
+    key: 'googleDriveKey',
+    label: 'Google Drive API Key',
+    placeholder: 'AIzaSy...',
+    icon: <Cloud className="w-5 h-5" />,
+    helpUrl: 'https://console.cloud.google.com/apis/credentials',
+  },
+];
+
+export default function UserSettingsModal() {
+  const { apiKeys, setApiKey, clearApiKey, isSettingsOpen, closeSettings, hasKey } = useUserSettings();
+  const [visibleFields, setVisibleFields] = useState<Set<keyof UserApiKeys>>(new Set());
+  const [editValues, setEditValues] = useState<Partial<UserApiKeys>>({});
+
+  if (!isSettingsOpen) return null;
+
+  const toggleVisibility = (key: keyof UserApiKeys) => {
+    const newVisible = new Set(visibleFields);
+    if (newVisible.has(key)) {
+      newVisible.delete(key);
+    } else {
+      newVisible.add(key);
+    }
+    setVisibleFields(newVisible);
+  };
+
+  const handleChange = (key: keyof UserApiKeys, value: string) => {
+    setEditValues({ ...editValues, [key]: value });
+  };
+
+  const handleSave = (key: keyof UserApiKeys) => {
+    const value = editValues[key];
+    if (value !== undefined) {
+      if (value.trim()) {
+        setApiKey(key, value.trim());
+      } else {
+        clearApiKey(key);
+      }
+      setEditValues({ ...editValues, [key]: undefined });
+    }
+  };
+
+  const getValue = (key: keyof UserApiKeys): string => {
+    if (editValues[key] !== undefined) {
+      return editValues[key] || '';
+    }
+    return apiKeys[key] || '';
+  };
+
+  const isEditing = (key: keyof UserApiKeys): boolean => {
+    return editValues[key] !== undefined;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+          <div className="flex items-center gap-3">
+            <Key className="w-6 h-6 text-[var(--accent-primary)]" />
+            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Your API Keys</h2>
+          </div>
+          <button
+            onClick={closeSettings}
+            className="p-2 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+          >
+            <X className="w-5 h-5 text-[var(--text-secondary)]" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Your API keys are stored securely in your browser's local storage. They are never sent to our servers and remain private to you.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {API_KEY_FIELDS.map((field) => (
+              <div key={field.key} className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-color)]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[var(--accent-primary)]">{field.icon}</span>
+                    <label className="font-medium text-[var(--text-primary)]">{field.label}</label>
+                    {hasKey(field.key) && (
+                      <Check className="w-4 h-4 text-green-500" />
+                    )}
+                  </div>
+                  {field.helpUrl && (
+                    <a
+                      href={field.helpUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-[var(--accent-primary)] hover:underline"
+                    >
+                      Get key
+                    </a>
+                  )}
+                </div>
+                
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={visibleFields.has(field.key) ? 'text' : 'password'}
+                      value={getValue(field.key)}
+                      onChange={(e) => handleChange(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="w-full px-3 py-2 pr-10 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleVisibility(field.key)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    >
+                      {visibleFields.has(field.key) ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  {isEditing(field.key) && (
+                    <button
+                      onClick={() => handleSave(field.key)}
+                      className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+                    >
+                      Save
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-color)]">
+            <div className="flex items-center gap-2 mb-2">
+              <HardDrive className="w-5 h-5 text-[var(--text-secondary)]" />
+              <span className="font-medium text-[var(--text-primary)]">Local File Access</span>
+            </div>
+            <p className="text-sm text-[var(--text-secondary)]">
+              For local hard drive access, use the file upload buttons in the app. Files are processed locally in your browser.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-[var(--border-color)] flex justify-end">
+          <button
+            onClick={closeSettings}
+            className="px-6 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

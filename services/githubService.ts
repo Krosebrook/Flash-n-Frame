@@ -4,6 +4,26 @@
 */
 import { RepoFileTree, DependencyInfo } from '../types';
 
+let userProvidedGitHubToken: string | null = null;
+
+export function setUserGitHubToken(token: string | null) {
+  userProvidedGitHubToken = token;
+}
+
+export function getUserGitHubToken(): string | null {
+  return userProvidedGitHubToken;
+}
+
+function getGitHubHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Accept': 'application/vnd.github.v3+json',
+  };
+  if (userProvidedGitHubToken) {
+    headers['Authorization'] = `Bearer ${userProvidedGitHubToken}`;
+  }
+  return headers;
+}
+
 /**
  * Fetches raw file content from a GitHub repository.
  */
@@ -207,12 +227,14 @@ export async function fetchRepoDependencies(owner: string, repo: string): Promis
 }
 
 export async function fetchRepoFileTree(owner: string, repo: string): Promise<RepoFileTree[]> {
-  // Common default branch names to try
   const branches = ['main', 'master'];
 
   for (const branch of branches) {
     try {
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+        { headers: getGitHubHeaders() }
+      );
 
       if (response.ok) {
         const data = await response.json();

@@ -7,9 +7,23 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { RepoFileTree, Citation, Task, DependencyInfo } from '../types';
 
-// Helper to ensure we always get the freshest key from the environment
-// immediately before a call.
-const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+let userProvidedGeminiKey: string | null = null;
+
+export function setUserGeminiKey(key: string | null) {
+  userProvidedGeminiKey = key;
+}
+
+export function getUserGeminiKey(): string | null {
+  return userProvidedGeminiKey;
+}
+
+const getAiClient = () => {
+  const key = userProvidedGeminiKey || process.env.API_KEY;
+  if (!key) {
+    throw new Error('No Gemini API key configured. Please add your API key in Settings.');
+  }
+  return new GoogleGenAI({ apiKey: key });
+};
 
 export interface InfographicResult {
     imageData: string | null;
