@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React from 'react';
-import { PenTool, CreditCard, Keyboard, Github, Sun, Moon, Palette, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { PenTool, CreditCard, Keyboard, Github, Sun, Moon, Palette, Settings, LogIn, LogOut, User } from 'lucide-react';
 import { ViewMode } from '../types';
 import { useTheme, Theme } from '../contexts/ThemeContext';
 import { useUserSettings } from '../contexts/UserSettingsContext';
+import { useAuth } from '../hooks/useAuth';
+import { AuthModal } from './AuthModal';
 
 interface AppHeaderProps {
   hasApiKey: boolean;
@@ -29,6 +31,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const { theme, setTheme } = useTheme();
   const { openSettings, hasKey } = useUserSettings();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const hasUserKeys = hasKey('geminiKey') || hasKey('githubToken');
   
   const cycleTheme = () => {
@@ -62,6 +66,37 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/5 border border-emerald-500/10 rounded-full text-[10px] font-bold text-emerald-400 font-mono uppercase tracking-widest cursor-help" title="API Key Active">
                   <CreditCard className="w-3 h-3" /> Paid Tier
               </div>
+          )}
+          {isAuthenticated && user ? (
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-full">
+                {user.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="" className="w-5 h-5 rounded-full" />
+                ) : (
+                  <User className="w-4 h-4 text-violet-400" />
+                )}
+                <span className="text-xs font-medium text-violet-300">
+                  {user.firstName || user.email?.split('@')[0] || 'User'}
+                </span>
+              </div>
+              <button
+                onClick={() => logout()}
+                className="p-2 md:p-2.5 rounded-xl bg-slate-900/50 border border-white/10 text-slate-400 hover:text-red-400 hover:border-red-500/50 transition-all"
+                title="Sign Out"
+                aria-label="Sign Out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-500 text-white font-medium hover:bg-violet-600 transition-all"
+              disabled={isLoading}
+            >
+              <LogIn className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign In</span>
+            </button>
           )}
           <button
             onClick={openSettings}
@@ -100,6 +135,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </a>
         </div>
       </div>
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </header>
   );
 };
