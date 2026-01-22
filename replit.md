@@ -80,6 +80,16 @@ Preferred communication style: Simple, everyday language.
 - AppHeader displays theme toggle button with dynamic icon
 - Themes: dark (Moon), light (Sun), solarized (Palette)
 
+## Documentation
+
+Comprehensive documentation is available in the `docs/` folder:
+
+- **[API.md](docs/API.md)** - API reference for all services (Gemini, GitHub, User Settings, Persistence)
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture, data flow diagrams, directory structure
+- **[FEATURES.md](docs/FEATURES.md)** - Detailed feature descriptions for all modules
+- **[CHANGELOG.md](docs/CHANGELOG.md)** - Version history and release notes
+- **[BEST_PRACTICES.md](docs/BEST_PRACTICES.md)** - Development guidelines, code style, security, testing
+
 ## System Architecture
 
 ### Frontend Architecture
