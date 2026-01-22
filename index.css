@@ -1,24 +1,58 @@
 @import "tailwindcss";
 
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800&family=Roboto+Condensed:wght@400;500;600;700&display=swap');
+
 :root {
-  --c-bg-950: 2 6 23;
-  --c-bg-900: 15 23 42;
-  --c-bg-800: 30 41 59;
+  /* INT Inc Brand Colors */
+  --int-primary: 43 108 133;       /* #2B6C85 - Teal Blue */
+  --int-accent: 51 71 91;          /* #33475B - Dark Slate */
+  --int-bg-dark: 15 20 30;         /* Deep dark for splash */
+  --int-surface: 25 32 45;         /* Card/surface dark */
   
-  --c-text-700: 51 65 85;
-  --c-text-600: 71 85 105;
-  --c-text-500: 100 116 139;
-  --c-text-400: 148 163 184;
-  --c-text-300: 203 213 225;
-  --c-text-200: 226 232 240;
-  --c-text-100: 241 245 249;
+  /* Glass card purple-pink gradient from design */
+  --int-glow-purple: 139 92 246;   /* Purple glow */
+  --int-glow-pink: 236 72 153;     /* Pink glow */
+  --int-glow-coral: 251 146 60;    /* Coral/orange glow */
+  
+  /* Semantic colors */
+  --int-success: 16 185 129;
+  --int-warning: 251 191 36;
+  --int-error: 239 68 68;
+  --int-info: 59 130 246;
+  
+  /* Legacy theme support - mapped to INT colors */
+  --c-bg-950: 15 20 30;
+  --c-bg-900: 25 32 45;
+  --c-bg-800: 35 45 60;
+  
+  --c-text-700: 71 85 105;
+  --c-text-600: 100 116 139;
+  --c-text-500: 128 140 160;
+  --c-text-400: 160 175 195;
+  --c-text-300: 200 210 225;
+  --c-text-200: 225 232 242;
+  --c-text-100: 245 248 252;
 
   --c-white: 255 255 255;
+  
+  /* Typography */
+  --font-body: 'Rubik', 'Helvetica', 'Arial', sans-serif;
+  --font-heading: 'Roboto Condensed', 'Helvetica', 'Arial', sans-serif;
+  
+  /* Spacing */
+  --space-unit: 4px;
+  --radius-sm: 3px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
 }
 
 .theme-light {
-  --c-bg-950: 248 250 252;
-  --c-bg-900: 255 255 255;
+  --int-bg-dark: 255 255 255;
+  --int-surface: 248 250 252;
+  
+  --c-bg-950: 255 255 255;
+  --c-bg-900: 248 250 252;
   --c-bg-800: 241 245 249;
 
   --c-text-700: 203 213 225;
@@ -33,6 +67,9 @@
 }
 
 .theme-solarized {
+  --int-bg-dark: 0 43 54;
+  --int-surface: 7 54 66;
+  
   --c-bg-950: 0 43 54;
   --c-bg-900: 7 54 66;
   --c-bg-800: 88 110 117;
@@ -46,6 +83,88 @@
   --c-text-100: 255 255 255; 
 
   --c-white: 238 232 213;
+}
+
+/* INT Inc branded glassmorphism utilities */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+}
+
+.glass-card-purple {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  box-shadow: 
+    0 0 40px rgba(139, 92, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-card-teal {
+  background: linear-gradient(135deg, rgba(43, 108, 133, 0.15) 0%, rgba(51, 71, 91, 0.1) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(43, 108, 133, 0.4);
+  box-shadow: 
+    0 0 30px rgba(43, 108, 133, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glow-purple {
+  box-shadow: 0 0 60px rgba(139, 92, 246, 0.4), 0 0 120px rgba(139, 92, 246, 0.2);
+}
+
+.glow-pink {
+  box-shadow: 0 0 60px rgba(236, 72, 153, 0.4), 0 0 120px rgba(236, 72, 153, 0.2);
+}
+
+.glow-teal {
+  box-shadow: 0 0 60px rgba(43, 108, 133, 0.4), 0 0 120px rgba(43, 108, 133, 0.2);
+}
+
+.circuit-line {
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.6), transparent);
+  height: 1px;
+}
+
+.circuit-node {
+  width: 6px;
+  height: 6px;
+  background: rgba(139, 92, 246, 0.8);
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.8);
+}
+
+.bokeh {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.4;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes circuit-flow {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-circuit-flow {
+  animation: circuit-flow 3s linear infinite;
 }
 
 @keyframes slide-up {
