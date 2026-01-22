@@ -17,6 +17,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Jan 22, 2026**: Added Replit Auth integration:
+  - OpenID Connect authentication via Replit
+  - Supports Google, GitHub, X, Apple, and email/password login
+  - Auth server runs on port 3001, proxied by Vite
+  - User sessions stored in PostgreSQL
+  - useAuth hook for React components
+  - Routes: /api/login, /api/logout, /api/auth/user
 - **Jan 22, 2026**: Expanded API key management with enterprise integrations:
   - **AWS Services**: Access Key, Secret Key, Region
   - **CRM & Support**: HubSpot API Key, Freshdesk API Key + Domain
