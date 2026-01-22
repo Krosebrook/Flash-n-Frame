@@ -17,6 +17,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Jan 22, 2026**: Expanded API key management with enterprise integrations:
+  - **AWS Services**: Access Key, Secret Key, Region
+  - **CRM & Support**: HubSpot API Key, Freshdesk API Key + Domain
+  - **Security**: Bitwarden Client ID + Secret
+  - **Enterprise**: vsaX API Key
+  - **Microsoft 365**: Client ID/Secret/Tenant ID, Teams Webhook, SharePoint Site URL, Power Apps Environment
+  - Settings modal now organized into 7 sections for easier navigation
 - **Jan 22, 2026**: Added user-specific API key management system:
   - UserSettingsContext stores keys in browser localStorage (private to each user)
   - UserSettingsModal for entering GitHub, Gemini, OpenAI, Anthropic, Notion, Google Drive keys

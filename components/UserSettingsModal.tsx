@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Key, Eye, EyeOff, Check, AlertCircle, Github, Sparkles, Brain, BookOpen, HardDrive, Cloud } from 'lucide-react';
+import { X, Key, Eye, EyeOff, Check, AlertCircle, Github, Sparkles, Brain, BookOpen, HardDrive, Cloud, Server, Users, Headphones, Lock, Zap, Monitor, MessageSquare, Share2, Grid, FileText } from 'lucide-react';
 import { useUserSettings, UserApiKeys } from '../contexts/UserSettingsContext';
 
 interface ApiKeyField {
@@ -10,48 +10,185 @@ interface ApiKeyField {
   helpUrl?: string;
 }
 
-const API_KEY_FIELDS: ApiKeyField[] = [
+interface ApiKeySection {
+  title: string;
+  fields: ApiKeyField[];
+}
+
+const API_KEY_SECTIONS: ApiKeySection[] = [
   {
-    key: 'githubToken',
-    label: 'GitHub Personal Access Token',
-    placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
-    icon: <Github className="w-5 h-5" />,
-    helpUrl: 'https://github.com/settings/tokens',
+    title: 'Developer & AI Services',
+    fields: [
+      {
+        key: 'githubToken',
+        label: 'GitHub Personal Access Token',
+        placeholder: 'ghp_xxxxxxxxxxxxxxxxxxxx',
+        icon: <Github className="w-5 h-5" />,
+        helpUrl: 'https://github.com/settings/tokens',
+      },
+      {
+        key: 'geminiKey',
+        label: 'Google Gemini API Key',
+        placeholder: 'AIzaSy...',
+        icon: <Sparkles className="w-5 h-5" />,
+        helpUrl: 'https://aistudio.google.com/apikey',
+      },
+      {
+        key: 'openaiKey',
+        label: 'OpenAI API Key',
+        placeholder: 'sk-...',
+        icon: <Brain className="w-5 h-5" />,
+        helpUrl: 'https://platform.openai.com/api-keys',
+      },
+      {
+        key: 'anthropicKey',
+        label: 'Anthropic API Key',
+        placeholder: 'sk-ant-...',
+        icon: <Brain className="w-5 h-5" />,
+        helpUrl: 'https://console.anthropic.com/settings/keys',
+      },
+    ],
   },
   {
-    key: 'geminiKey',
-    label: 'Google Gemini API Key',
-    placeholder: 'AIzaSy...',
-    icon: <Sparkles className="w-5 h-5" />,
-    helpUrl: 'https://aistudio.google.com/apikey',
+    title: 'Cloud Storage',
+    fields: [
+      {
+        key: 'notionKey',
+        label: 'Notion Integration Token',
+        placeholder: 'secret_...',
+        icon: <BookOpen className="w-5 h-5" />,
+        helpUrl: 'https://www.notion.so/my-integrations',
+      },
+      {
+        key: 'googleDriveKey',
+        label: 'Google Drive API Key',
+        placeholder: 'AIzaSy...',
+        icon: <Cloud className="w-5 h-5" />,
+        helpUrl: 'https://console.cloud.google.com/apis/credentials',
+      },
+    ],
   },
   {
-    key: 'openaiKey',
-    label: 'OpenAI API Key',
-    placeholder: 'sk-...',
-    icon: <Brain className="w-5 h-5" />,
-    helpUrl: 'https://platform.openai.com/api-keys',
+    title: 'AWS Services',
+    fields: [
+      {
+        key: 'awsAccessKey',
+        label: 'AWS Access Key ID',
+        placeholder: 'AKIAIOSFODNN7EXAMPLE',
+        icon: <Server className="w-5 h-5" />,
+        helpUrl: 'https://console.aws.amazon.com/iam/home#/security_credentials',
+      },
+      {
+        key: 'awsSecretKey',
+        label: 'AWS Secret Access Key',
+        placeholder: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+        icon: <Server className="w-5 h-5" />,
+      },
+      {
+        key: 'awsRegion',
+        label: 'AWS Region',
+        placeholder: 'us-east-1',
+        icon: <Server className="w-5 h-5" />,
+      },
+    ],
   },
   {
-    key: 'anthropicKey',
-    label: 'Anthropic API Key',
-    placeholder: 'sk-ant-...',
-    icon: <Brain className="w-5 h-5" />,
-    helpUrl: 'https://console.anthropic.com/settings/keys',
+    title: 'CRM & Support',
+    fields: [
+      {
+        key: 'hubspotKey',
+        label: 'HubSpot API Key',
+        placeholder: 'pat-na1-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        icon: <Users className="w-5 h-5" />,
+        helpUrl: 'https://app.hubspot.com/settings/private-apps',
+      },
+      {
+        key: 'freshdeskKey',
+        label: 'Freshdesk API Key',
+        placeholder: 'your-freshdesk-api-key',
+        icon: <Headphones className="w-5 h-5" />,
+        helpUrl: 'https://support.freshdesk.com/support/solutions/articles/215517-how-to-find-your-api-key',
+      },
+      {
+        key: 'freshdeskDomain',
+        label: 'Freshdesk Domain',
+        placeholder: 'yourcompany.freshdesk.com',
+        icon: <Headphones className="w-5 h-5" />,
+      },
+    ],
   },
   {
-    key: 'notionKey',
-    label: 'Notion Integration Token',
-    placeholder: 'secret_...',
-    icon: <BookOpen className="w-5 h-5" />,
-    helpUrl: 'https://www.notion.so/my-integrations',
+    title: 'Security & Passwords',
+    fields: [
+      {
+        key: 'bitwardenClientId',
+        label: 'Bitwarden Client ID',
+        placeholder: 'client_id_xxxxxxxx',
+        icon: <Lock className="w-5 h-5" />,
+        helpUrl: 'https://bitwarden.com/help/personal-api-key/',
+      },
+      {
+        key: 'bitwardenClientSecret',
+        label: 'Bitwarden Client Secret',
+        placeholder: 'client_secret_xxxxxxxx',
+        icon: <Lock className="w-5 h-5" />,
+      },
+    ],
   },
   {
-    key: 'googleDriveKey',
-    label: 'Google Drive API Key',
-    placeholder: 'AIzaSy...',
-    icon: <Cloud className="w-5 h-5" />,
-    helpUrl: 'https://console.cloud.google.com/apis/credentials',
+    title: 'Enterprise Tools',
+    fields: [
+      {
+        key: 'vsaxKey',
+        label: 'vsaX API Key',
+        placeholder: 'your-vsax-api-key',
+        icon: <Zap className="w-5 h-5" />,
+      },
+    ],
+  },
+  {
+    title: 'Microsoft 365 & Azure',
+    fields: [
+      {
+        key: 'microsoftClientId',
+        label: 'Microsoft App Client ID',
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        icon: <Monitor className="w-5 h-5" />,
+        helpUrl: 'https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+      },
+      {
+        key: 'microsoftClientSecret',
+        label: 'Microsoft App Client Secret',
+        placeholder: 'your-client-secret',
+        icon: <Monitor className="w-5 h-5" />,
+      },
+      {
+        key: 'microsoftTenantId',
+        label: 'Microsoft Tenant ID',
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        icon: <Monitor className="w-5 h-5" />,
+      },
+      {
+        key: 'teamsWebhook',
+        label: 'Microsoft Teams Webhook URL',
+        placeholder: 'https://outlook.office.com/webhook/...',
+        icon: <MessageSquare className="w-5 h-5" />,
+        helpUrl: 'https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook',
+      },
+      {
+        key: 'sharePointSiteUrl',
+        label: 'SharePoint Site URL',
+        placeholder: 'https://yourcompany.sharepoint.com/sites/yoursite',
+        icon: <Share2 className="w-5 h-5" />,
+      },
+      {
+        key: 'powerAppsEnvironment',
+        label: 'Power Apps Environment ID',
+        placeholder: 'Default-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        icon: <Grid className="w-5 h-5" />,
+        helpUrl: 'https://make.powerapps.com/',
+      },
+    ],
   },
 ];
 
@@ -123,59 +260,68 @@ export default function UserSettingsModal() {
             </p>
           </div>
 
-          <div className="space-y-4">
-            {API_KEY_FIELDS.map((field) => (
-              <div key={field.key} className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-color)]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[var(--accent-primary)]">{field.icon}</span>
-                    <label className="font-medium text-[var(--text-primary)]">{field.label}</label>
-                    {hasKey(field.key) && (
-                      <Check className="w-4 h-4 text-green-500" />
-                    )}
-                  </div>
-                  {field.helpUrl && (
-                    <a
-                      href={field.helpUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-[var(--accent-primary)] hover:underline"
-                    >
-                      Get key
-                    </a>
-                  )}
-                </div>
-                
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type={visibleFields.has(field.key) ? 'text' : 'password'}
-                      value={getValue(field.key)}
-                      onChange={(e) => handleChange(field.key, e.target.value)}
-                      placeholder={field.placeholder}
-                      className="w-full px-3 py-2 pr-10 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent font-mono text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => toggleVisibility(field.key)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                    >
-                      {visibleFields.has(field.key) ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                  
-                  {isEditing(field.key) && (
-                    <button
-                      onClick={() => handleSave(field.key)}
-                      className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
-                    >
-                      Save
-                    </button>
-                  )}
+          <div className="space-y-6">
+            {API_KEY_SECTIONS.map((section) => (
+              <div key={section.title}>
+                <h3 className="text-sm font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+                  {section.title}
+                </h3>
+                <div className="space-y-3">
+                  {section.fields.map((field) => (
+                    <div key={field.key} className="p-4 bg-[var(--bg-tertiary)] rounded-lg border border-[var(--border-color)]">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[var(--accent-primary)]">{field.icon}</span>
+                          <label className="font-medium text-[var(--text-primary)]">{field.label}</label>
+                          {hasKey(field.key) && (
+                            <Check className="w-4 h-4 text-green-500" />
+                          )}
+                        </div>
+                        {field.helpUrl && (
+                          <a
+                            href={field.helpUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[var(--accent-primary)] hover:underline"
+                          >
+                            Get key
+                          </a>
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type={visibleFields.has(field.key) ? 'text' : 'password'}
+                            value={getValue(field.key)}
+                            onChange={(e) => handleChange(field.key, e.target.value)}
+                            placeholder={field.placeholder}
+                            className="w-full px-3 py-2 pr-10 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent font-mono text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleVisibility(field.key)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                          >
+                            {visibleFields.has(field.key) ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                        
+                        {isEditing(field.key) && (
+                          <button
+                            onClick={() => handleSave(field.key)}
+                            className="px-4 py-2 bg-[var(--accent-primary)] text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+                          >
+                            Save
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

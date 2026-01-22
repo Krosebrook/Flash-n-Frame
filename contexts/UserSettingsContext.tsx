@@ -9,6 +9,21 @@ export interface UserApiKeys {
   anthropicKey?: string;
   notionKey?: string;
   googleDriveKey?: string;
+  awsAccessKey?: string;
+  awsSecretKey?: string;
+  awsRegion?: string;
+  hubspotKey?: string;
+  freshdeskKey?: string;
+  freshdeskDomain?: string;
+  bitwardenClientId?: string;
+  bitwardenClientSecret?: string;
+  vsaxKey?: string;
+  microsoftClientId?: string;
+  microsoftClientSecret?: string;
+  microsoftTenantId?: string;
+  teamsWebhook?: string;
+  sharePointSiteUrl?: string;
+  powerAppsEnvironment?: string;
 }
 
 interface UserSettingsContextType {
