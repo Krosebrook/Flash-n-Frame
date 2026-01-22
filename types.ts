@@ -132,6 +132,162 @@ export interface Task {
   createdAt: number;
 }
 
+// ==================== OmniGen Types ====================
+
+/**
+ * Grid Layout Configuration for OmniGen dashboards
+ */
+export const GRID_SYSTEM = {
+  COLS: 12,
+  ROW_HEIGHT_PX: 100,
+  GAP_PX: 24,
+};
+
+export enum EditMode {
+  SAFE = 'SAFE',
+  PRO = 'PRO'
+}
+
+export enum VizType {
+  TABLE = 'table',
+  PIVOT = 'pivot',
+  TIME_SERIES = 'time-series',
+  FUNNEL = 'funnel',
+  COHORT = 'cohort',
+  GEO_MAP = 'geo-map',
+  SANKEY = 'sankey',
+  NETWORK = 'network',
+  BAR = 'bar',
+  COLUMN = 'column',
+  STACKED_BAR = 'stacked-bar',
+  SCATTER = 'scatter',
+  HISTOGRAM = 'histogram',
+  HEATMAP = 'heatmap',
+  TREEMAP = 'treemap',
+  BOX_PLOT = 'box-plot',
+  GAUGE = 'gauge',
+  WATERFALL = 'waterfall',
+  KPI_CARD = 'kpi-card'
+}
+
+export interface SemanticModel {
+  entities: { name: string; description: string; likely_keys: string[]; example_fields: string[] }[];
+  metrics: { name: string; definition: string; aggregation: string; grain: string; caveats?: string }[];
+  dimensions: { name: string; type: string; examples: string[] }[];
+  relationships: { from_entity: string; to_entity: string; join_keys: string[]; join_type: string; confidence: number }[];
+  kpis: { name: string; metric: string; goal_direction: 'up' | 'down'; target: string; alert_threshold: string }[];
+  glossary: { term: string; meaning: string; synonyms: string[] }[];
+  quality_flags: { issue: string; impacted_fields: string[]; severity: 'low' | 'medium' | 'high'; suggested_fix: string }[];
+  assumptions: { assumption: string; impact: string; confirm_by: string }[];
+}
+
+export interface WidgetConfig {
+  id: string;
+  type: VizType;
+  title: string;
+  metric?: string;
+  dimension?: string;
+  secondaryDimension?: string;
+  filter?: Record<string, any>;
+  w: number;
+  h: number;
+  x: number;
+  y: number;
+}
+
+export interface DashboardTemplate {
+  id: string;
+  name: string;
+  category: string;
+  archetype: 'Executive' | 'Ops' | 'Analyst';
+  description: string;
+  widgets: WidgetConfig[];
+  difficulty: 'Novice' | 'Intermediate' | 'Pro';
+}
+
+export interface AnalysisResult {
+  summary: string;
+  drivers: string[];
+  recommendations: string[];
+  sentiment: 'positive' | 'negative' | 'neutral';
+  marketContext?: string;
+  sources?: { title: string; uri: string }[];
+}
+
+// ==================== DashBoardGen Types ====================
+
+export interface Artifact {
+  id: string;
+  styleName: string;
+  html: string;
+  originalHtml?: string;
+  status: 'streaming' | 'complete' | 'error';
+}
+
+export interface Session {
+  id: string;
+  prompt: string;
+  timestamp: number;
+  artifacts: Artifact[];
+}
+
+export interface ComponentVariation { name: string; html: string; }
+export interface LayoutOption { name: string; css: string; previewHtml: string; }
+
+export type Framework = 'vanilla' | 'tailwind' | 'react-mui' | 'bootstrap' | 'foundation';
+
+export interface GenerationSettings {
+  framework: Framework;
+  dataContext: string;
+  autoA11y: boolean;
+  autoCharts: boolean;
+  autoPersonas: boolean;
+}
+
+// ==================== INFOGenius Types ====================
+
+export type AspectRatio = '16:9' | '9:16' | '1:1' | '4:3' | '3:4';
+export type ComplexityLevel = 'Elementary' | 'High School' | 'College' | 'Expert';
+
+export type VisualStyle = 
+  | 'Default' | 'Minimalist' | 'Realistic' | 'Cartoon' | 'Vintage' | 'Futuristic' 
+  | '3D Render' | 'Sketch' | 'Pixel Art' | 'Origami' | 'Watercolor' | 'Neon' 
+  | 'Flat Art' | 'Isometric' | 'Low Poly' | 'Pop Art' | 'Steampunk' | 'Ukiyo-e' 
+  | 'Graffiti' | 'Noir' | 'Stained Glass' | 'Claymation' | 'Blueprint' 
+  | 'Oil Painting' | 'Art Deco' | 'Psychedelic' | 'Papercut';
+
+export type Language = 'English' | 'Spanish' | 'French' | 'German' | 'Mandarin' | 'Japanese' | 'Hindi' | 'Arabic' | 'Portuguese' | 'Russian';
+export type ImageQuality = '1K' | '2K' | '4K';
+
+export interface GeneratedImage {
+  id: string;
+  data: string;
+  prompt: string;
+  timestamp: number;
+  level?: ComplexityLevel;
+  style?: VisualStyle;
+  language?: Language;
+  quality?: ImageQuality;
+  aspectRatio?: AspectRatio;
+  relatedTopics?: string[];
+  facts?: string[];
+  audioUrl?: string;
+  parentImageId?: string;
+  batchId?: string;
+}
+
+export interface SearchResultItem {
+  title: string;
+  url: string;
+}
+
+export interface ResearchResult {
+  imagePrompt: string;
+  facts: string[];
+  searchResults: SearchResultItem[];
+  suggestions: string[];
+}
+
 // Global type augmentations
 declare global {
   interface AIStudio {

@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Artifact } from '../types';
-import { DesktopIcon, TabletIcon, MobileIcon } from './Icons';
+import { DesktopIcon, TabletIcon, MobileIcon } from './DashboardIcons';
 
 interface ArtifactCardProps {
     artifact: Artifact;

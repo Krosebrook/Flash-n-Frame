@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useRef } from 'react';
-import { WidgetConfig, EditMode, VizType, GRID_SYSTEM } from '../types';
+import { WidgetConfig, EditMode, VizType, GRID_SYSTEM } from '../../types';
 import { ChartRenderer } from './ChartRenderer';
-import { Icons } from '../constants';
+import { Icons } from '../../constants';
 
 const DRILL_HIERARCHY = ['region', 'category', 'date'];
 

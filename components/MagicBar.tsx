@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { Icons } from '../constants';
-import { parsePrompt } from '../services/aiService';
+import { parsePrompt } from '../services/omniAiService';
 import { WidgetConfig, SemanticModel, VizType } from '../types';
 
 interface MagicBarProps {

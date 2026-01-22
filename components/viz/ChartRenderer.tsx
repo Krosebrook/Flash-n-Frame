@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
-import { Icons } from '../constants';
-import { VizType, WidgetConfig } from '../types';
+import { Icons } from '../../constants';
+import { VizType, WidgetConfig } from '../../types';
 import { VizArea } from './VizArea';
 import { VizBar } from './VizBar';
 import { VizKPI } from './VizKPI';
