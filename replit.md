@@ -17,6 +17,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Jan 23, 2026**: New INT Inc branded splash page:
+  - Circuit pattern background image (splash-circuit-bg.png)
+  - Purple/teal/pink bokeh glow effects
+  - Glassmorphism icon container with Zap icon
+  - Gradient "Flash-n-Frame" title using Roboto Condensed font
+  - Loading progress bar with purple-teal-pink gradient
+  - "Enter Studio" button appears after loading
+  - "Powered by INT Inc" footer
+  - Replaces previous IntroAnimation component
 - **Jan 22, 2026**: Complete Progressive Web App (PWA) implementation:
   - **Enhanced Manifest**: Icons (72x72, 192x192, 512x512), shortcuts, file handlers, share target
   - **Advanced Service Worker**: Multiple caching strategies (network-first, cache-first, stale-while-revalidate)

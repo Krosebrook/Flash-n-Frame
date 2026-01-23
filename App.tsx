@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import IntroAnimation from './components/IntroAnimation';
+import SplashPage from './components/SplashPage';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 import UserSettingsModal from './components/UserSettingsModal';
 import { AppHeader } from './components/AppHeader';
@@ -85,7 +85,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-500">
-      {showIntro && <IntroAnimation onComplete={handleIntroComplete} />}
+      {showIntro && <SplashPage onComplete={handleIntroComplete} />}
       
       {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
 
