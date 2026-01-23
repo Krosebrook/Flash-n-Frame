@@ -17,13 +17,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **Jan 23, 2026**: New INT Inc branded splash page:
+- **Jan 23, 2026**: New INT Inc branded animated splash page:
   - Circuit pattern background image (splash-circuit-bg.png)
-  - Purple/teal/pink bokeh glow effects
-  - Glassmorphism icon container with Zap icon
+  - Canvas-based warp drive animation with flying characters (0, 1, F, L, A, S, H, etc.)
+  - Particles colored in purple (#8b5cf6), teal (#2B6C85), and pink (#ec4899)
+  - Purple/teal/pink bokeh glow effects with pulse animations
+  - Glassmorphism icon container with Zap icon and glow effect
   - Gradient "Flash-n-Frame" title using Roboto Condensed font
   - Loading progress bar with purple-teal-pink gradient
-  - "Enter Studio" button appears after loading
+  - "Enter Studio" button appears after loading (particles slow down when ready)
+  - Warp speed accelerates on exit transition
   - "Powered by INT Inc" footer
   - Replaces previous IntroAnimation component
 - **Jan 22, 2026**: Complete Progressive Web App (PWA) implementation:
