@@ -17,6 +17,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Jan 24, 2026**: Resource efficiency optimizations:
+  - **API Caching**: Added `services/cache.ts` with TTL-based memory cache, request deduplication, and exponential backoff
+  - **GitHub Service**: Caches repository tree responses for 5 minutes, deduplicates concurrent requests
+  - **Animation Optimizations**: All canvas animations now have FPS caps (20-30 FPS) and pause when tab is hidden via Page Visibility API
+  - **Reduced Intervals**: LoadingState logs (800ms → 2.5s), useDataManager streaming (2s → 5s), offline check (5s → 30s)
+  - **Particle Reduction**: Splash page particles reduced from 300 to 200
+  - **Visibility-aware Updates**: All setInterval hooks now skip updates when document.hidden is true
+  - Target: <5% CPU idle, minimized memory footprint
 - **Jan 23, 2026**: New INT Inc branded animated splash page:
   - Circuit pattern background image (splash-circuit-bg.png)
   - Canvas-based warp drive animation with flying characters (0, 1, F, L, A, S, H, etc.)

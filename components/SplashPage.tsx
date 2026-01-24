@@ -46,13 +46,14 @@ const SplashPage: React.FC<SplashPageProps> = ({ onComplete }) => {
     let animationFrameId: number;
     let width = window.innerWidth;
     let height = window.innerHeight;
+    let isPaused = false;
     
     canvas.width = width;
     canvas.height = height;
 
     const chars = "010101<>{}[]/\\Σ∫π∆∇FLASHFRAME⚡";
     const particles: { x: number; y: number; z: number; char: string; color: string }[] = [];
-    const particleCount = 300;
+    const particleCount = 200;
     
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -65,10 +66,23 @@ const SplashPage: React.FC<SplashPageProps> = ({ onComplete }) => {
     }
 
     let lastTime = performance.now();
+    const targetFPS = 30;
+    const frameInterval = 1000 / targetFPS;
 
     const render = (time: number) => {
-      const deltaTime = Math.min((time - lastTime) / 16.67, 2.0);
-      lastTime = time;
+      if (isPaused || document.hidden) {
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
+      
+      const elapsed = time - lastTime;
+      if (elapsed < frameInterval) {
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
+      
+      const deltaTime = Math.min(elapsed / 16.67, 2.0);
+      lastTime = time - (elapsed % frameInterval);
 
       const currentPhase = phaseRef.current;
 
@@ -124,10 +138,18 @@ const SplashPage: React.FC<SplashPageProps> = ({ onComplete }) => {
       canvas.height = height;
     };
 
+    const handleVisibility = () => {
+      isPaused = document.hidden;
+      if (!isPaused) lastTime = performance.now();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('resize', handleResize);
+    
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 

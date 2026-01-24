@@ -81,8 +81,25 @@ export default function DottedGlowBackground({
     regenDots();
     window.addEventListener("resize", regenDots);
 
+    let lastFrameTime = 0;
+    const targetFPS = 20;
+    const frameInterval = 1000 / targetFPS;
+
     const draw = (now: number) => {
       if (stopped) return;
+      
+      if (document.hidden) {
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+      
+      const delta = now - lastFrameTime;
+      if (delta < frameInterval) {
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+      lastFrameTime = now - (delta % frameInterval);
+      
       const { width, height } = container.getBoundingClientRect();
       ctx.clearRect(0, 0, width, height);
       ctx.globalAlpha = opacity;
@@ -111,13 +128,21 @@ export default function DottedGlowBackground({
 
       raf = requestAnimationFrame(draw);
     };
-
+    
+    const handleVisibility = () => {
+      if (!document.hidden && stopped === false) {
+        lastFrameTime = performance.now();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
     raf = requestAnimationFrame(draw);
 
     return () => {
       stopped = true;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", regenDots);
+      document.removeEventListener('visibilitychange', handleVisibility);
       ro.disconnect();
     };
   }, [gap, radius, color, glowColor, opacity, speedMin, speedMax, speedScale]);

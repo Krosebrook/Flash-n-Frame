@@ -53,22 +53,45 @@ export const LoadingState: React.FC<LoadingStateProps> = ({ message, type }) => 
 
   const Icon = config.icon;
 
-  // Simulate live terminal logs
+  // Simulate live terminal logs (optimized: 2.5s interval, visibility-aware)
   useEffect(() => {
     setLogs([`> initializing ${config.logPrefix}_module...`]);
     
-    const interval = setInterval(() => {
-      setLogs(prev => {
-        const nextLog = config.tasks[Math.floor(Math.random() * config.tasks.length)];
-        const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-        const newLogs = [...prev, `[${timestamp}] ${nextLog} ... OK`];
-        // Keep only last 5 logs
-        if (newLogs.length > 5) return newLogs.slice(newLogs.length - 5);
-        return newLogs;
-      });
-    }, 800);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    
+    const startInterval = () => {
+      if (interval) return;
+      interval = setInterval(() => {
+        if (document.hidden) return;
+        setLogs(prev => {
+          const nextLog = config.tasks[Math.floor(Math.random() * config.tasks.length)];
+          const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+          const newLogs = [...prev, `[${timestamp}] ${nextLog} ... OK`];
+          if (newLogs.length > 5) return newLogs.slice(newLogs.length - 5);
+          return newLogs;
+        });
+      }, 2500);
+    };
+    
+    const stopInterval = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+    
+    const handleVisibility = () => {
+      if (document.hidden) stopInterval();
+      else startInterval();
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibility);
+    startInterval();
 
-    return () => clearInterval(interval);
+    return () => {
+      stopInterval();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [type]);
 
   return (

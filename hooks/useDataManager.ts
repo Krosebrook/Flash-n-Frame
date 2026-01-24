@@ -5,19 +5,26 @@ export const useDataManager = (currentTemplateName: string) => {
   const [data, setData] = useState<any[]>(DEMO_DATA);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  // Live Data Simulation
+  // Live Data Simulation (optimized: 5s interval, visibility-aware)
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    
+    const updateData = () => {
+      if (document.hidden) return;
+      setData(prev => prev.map(item => ({
+        ...item,
+        sales: Math.max(0, item.sales + (Math.random() - 0.5) * 500),
+        users: Math.max(0, item.users + Math.floor((Math.random() - 0.5) * 10))
+      })));
+    };
+    
     if (isStreaming) {
-      interval = setInterval(() => {
-        setData(prev => prev.map(item => ({
-          ...item,
-          sales: Math.max(0, item.sales + (Math.random() - 0.5) * 500),
-          users: Math.max(0, item.users + Math.floor((Math.random() - 0.5) * 10))
-        })));
-      }, 2000);
+      interval = setInterval(updateData, 5000);
     }
-    return () => clearInterval(interval);
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isStreaming]);
 
   // File Upload Handler (CSV/JSON)
