@@ -43,8 +43,8 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     onClick={() => onNavigate(ViewMode.REPO_ANALYZER)}
                     className="w-full glass-panel p-5 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-violet-500/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-violet relative overflow-hidden"
                 >
-                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <GitBranch className="w-24 h-24 -rotate-12" />
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 opacity-30 group-hover:opacity-50 transition-opacity">
+                        <img src="/images/icon-cloud.png" alt="" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex items-center gap-5 relative z-10">
                         <div className="p-3.5 bg-violet-500/20 rounded-xl text-violet-300 border border-violet-500/20 group-hover:bg-violet-500 group-hover:text-white transition-colors">
@@ -69,8 +69,8 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     onClick={() => onNavigate(ViewMode.ARTICLE_INFOGRAPHIC)}
                     className="w-full glass-panel p-5 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-emerald-500/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-emerald relative overflow-hidden"
                 >
-                     <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <FileText className="w-24 h-24 -rotate-12" />
+                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 opacity-30 group-hover:opacity-50 transition-opacity">
+                        <img src="/images/icon-analytics.png" alt="" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex items-center gap-5 relative z-10">
                         <div className="p-3.5 bg-emerald-500/20 rounded-xl text-emerald-300 border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
@@ -95,8 +95,8 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     onClick={() => onNavigate(ViewMode.IMAGE_EDITOR)}
                     className="w-full glass-panel p-5 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-pink-500/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-violet relative overflow-hidden"
                 >
-                     <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Wand2 className="w-24 h-24 -rotate-12" />
+                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 opacity-30 group-hover:opacity-50 transition-opacity">
+                        <img src="/images/icon-creative.png" alt="" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex items-center gap-5 relative z-10">
                         <div className="p-3.5 bg-pink-500/20 rounded-xl text-pink-300 border border-pink-500/20 group-hover:bg-pink-500 group-hover:text-white transition-colors">
@@ -121,8 +121,8 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
                     onClick={() => onNavigate(ViewMode.DEV_STUDIO)}
                     className="w-full glass-panel p-5 rounded-2xl hover:bg-white/10 transition-all border border-white/5 hover:border-cyan-500/50 text-left group-hover:translate-x-1 group-hover:shadow-neon-cyan relative overflow-hidden"
                 >
-                     <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Code2 className="w-24 h-24 -rotate-12" />
+                     <div className="absolute right-0 top-1/2 -translate-y-1/2 w-24 h-24 opacity-30 group-hover:opacity-50 transition-opacity">
+                        <img src="/images/icon-projects.png" alt="" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex items-center gap-5 relative z-10">
                         <div className="p-3.5 bg-cyan-500/20 rounded-xl text-cyan-300 border border-cyan-500/20 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
@@ -192,4 +192,3 @@ const Home: React.FC<HomeProps> = ({ onNavigate }) => {
 };
 
 export default Home;
-    

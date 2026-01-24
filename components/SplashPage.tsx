@@ -208,6 +208,37 @@ const SplashPage: React.FC<SplashPageProps> = ({ onComplete }) => {
             animationDelay: '2s'
           }}
         />
+        
+        <img 
+          src="/images/icon-security.png" 
+          alt=""
+          className="absolute w-20 h-20 opacity-20 animate-float"
+          style={{ top: '15%', left: '10%', animationDelay: '0s' }}
+        />
+        <img 
+          src="/images/icon-cloud.png" 
+          alt=""
+          className="absolute w-24 h-24 opacity-15 animate-float"
+          style={{ top: '25%', right: '8%', animationDelay: '1.5s' }}
+        />
+        <img 
+          src="/images/icon-analytics.png" 
+          alt=""
+          className="absolute w-16 h-16 opacity-20 animate-float"
+          style={{ bottom: '30%', left: '5%', animationDelay: '0.8s' }}
+        />
+        <img 
+          src="/images/icon-creative.png" 
+          alt=""
+          className="absolute w-[72px] h-[72px] opacity-15 animate-float"
+          style={{ bottom: '15%', right: '15%', animationDelay: '2s' }}
+        />
+        <img 
+          src="/images/icon-projects.png" 
+          alt=""
+          className="absolute w-14 h-14 opacity-20 animate-float"
+          style={{ top: '60%', left: '15%', animationDelay: '1.2s' }}
+        />
       </div>
 
       <div className="relative z-10 flex flex-col items-center gap-8 px-6">

@@ -17,6 +17,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Jan 24, 2026**: Integrated branded neon-style images throughout the app:
+  - **Home Page Feature Cards**: GitHub (cloud), SiteSketch (analytics), RealityEngine (creative palette), DevStudio (projects folder)
+  - **Splash Page**: Floating animated icons with float animation (security, cloud, analytics, creative, projects)
+  - **Navigation Tabs**: Small image icons replace Lucide icons for visual consistency
+  - **PWA Manifest**: Added branded icon to manifest icons array
+  - All images stored in `/public/images/` with descriptive names
 - **Jan 24, 2026**: Resource efficiency optimizations:
   - **API Caching**: Added `services/cache.ts` with TTL-based memory cache, request deduplication, and exponential backoff
   - **GitHub Service**: Caches repository tree responses for 5 minutes, deduplicates concurrent requests

@@ -5,7 +5,7 @@
 */
 
 import React from 'react';
-import { Home as HomeIcon, GitBranch, FileText, Wand2, Code2 } from 'lucide-react';
+import { Home as HomeIcon } from 'lucide-react';
 import { ViewMode } from '../types';
 
 interface NavigationTabsProps {
@@ -14,8 +14,6 @@ interface NavigationTabsProps {
 }
 
 export const NavigationTabs: React.FC<NavigationTabsProps> = ({ currentView, onNavigate }) => {
-  // Return null early if on Home view, similar to original logic, 
-  // but handling it here encapsulates the logic better.
   if (currentView === ViewMode.HOME) return null;
 
   return (
@@ -38,7 +36,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({ currentView, onN
           }`}
           title="GitFlow (Alt+2)"
         >
-          <GitBranch className="w-4 h-4" />
+          <img src="/images/icon-cloud.png" alt="" className="w-5 h-5 object-contain" />
           <span className="hidden sm:inline">GitFlow</span>
         </button>
         <button
@@ -50,7 +48,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({ currentView, onN
           }`}
           title="SiteSketch (Alt+3)"
         >
-          <FileText className="w-4 h-4" />
+          <img src="/images/icon-analytics.png" alt="" className="w-5 h-5 object-contain" />
           <span className="hidden sm:inline">SiteSketch</span>
         </button>
         <button
@@ -62,7 +60,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({ currentView, onN
           }`}
           title="RealityEngine (Alt+4)"
         >
-          <Wand2 className="w-4 h-4" />
+          <img src="/images/icon-creative.png" alt="" className="w-5 h-5 object-contain" />
           <span className="hidden sm:inline">RealityEngine</span>
         </button>
         <button
@@ -74,7 +72,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = ({ currentView, onN
           }`}
           title="DevStudio (Alt+5)"
         >
-          <Code2 className="w-4 h-4" />
+          <img src="/images/icon-projects.png" alt="" className="w-5 h-5 object-contain" />
           <span className="hidden sm:inline">DevStudio</span>
         </button>
       </div>
