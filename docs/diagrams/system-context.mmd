@@ -1,0 +1,19 @@
+graph TB
+    User[User Browser]
+    App[Flash-n-Frame App<br/>React + Vite]
+    AuthServer[Auth Server<br/>Express + Node]
+    DB[(PostgreSQL)]
+    Gemini[Google Gemini AI]
+    GitHub[GitHub API]
+    
+    User -->|HTTPS| App
+    App -->|API| AuthServer
+    AuthServer -->|SQL| DB
+    App -->|SDK| Gemini
+    App -->|REST| GitHub
+    
+    style App fill:#2B6C85,color:#fff
+    style AuthServer fill:#2B6C85,color:#fff
+    style DB fill:#33475B,color:#fff
+    style Gemini fill:#8b5cf6,color:#fff
+    style GitHub fill:#1f2937,color:#fff
