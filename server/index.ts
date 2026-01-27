@@ -19,32 +19,43 @@ async function startServer() {
   registerAuthRoutes(app);
   
   app.post("/api/auth/magic-link", async (req, res) => {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      if (!process.env.SENDGRID_API_KEY) {
+        return res.status(501).json({ 
+          message: "Magic link authentication requires SendGrid. Please configure the SendGrid integration." 
+        });
+      }
+      // Placeholder for actual magic link logic
+      res.json({ message: "Magic link sent! Check your email." });
+    } catch (error) {
+      console.error("Magic link error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
-    if (!process.env.SENDGRID_API_KEY) {
-      return res.status(501).json({ 
-        message: "Magic link authentication requires SendGrid. Please configure the SendGrid integration." 
-      });
-    }
-    res.json({ message: "Magic link sent! Check your email." });
   });
 
   app.post("/api/auth/phone", async (req, res) => {
-    const { phone, code } = req.body;
-    if (!phone) {
-      return res.status(400).json({ message: "Phone number is required" });
-    }
-    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
-      return res.status(501).json({ 
-        message: "Phone authentication requires Twilio. Please configure the Twilio integration." 
-      });
-    }
-    if (code) {
-      res.json({ message: "Phone verified successfully!" });
-    } else {
-      res.json({ message: "Verification code sent to your phone." });
+    try {
+      const { phone, code } = req.body;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+        return res.status(501).json({ 
+          message: "Phone authentication requires Twilio. Please configure the Twilio integration." 
+        });
+      }
+      if (code) {
+        res.json({ message: "Phone verified successfully!" });
+      } else {
+        res.json({ message: "Verification code sent to your phone." });
+      }
+    } catch (error) {
+      console.error("Phone auth error:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
